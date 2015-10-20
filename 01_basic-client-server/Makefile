@@ -1,13 +1,19 @@
 .PHONY: clean
 
-CFLAGS  := -Wall -g
-LDLIBS  := ${LDLIBS} -lrdmacm -libverbs -lpthread
+LDLIBS = -lrdmacm -libverbs -lpthread -lrt
+CC = gcc
+CFLAGS = -Wall
+OBJS = server.o shared_ib.o
+OBJC = client.o shared_ib.o
 
-APPS    := server client
+%.o: %.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-all: ${APPS}
+server: $(OBJS)
+	$(CC) -o $@ $^ $(LDLIBS) 
 
+client: $(OBJC)
+	$(CC) -o $@ $^ $(LDLIBS)
 
 clean:
-	rm -f ${APPS}
-
+	rm *.o server client
