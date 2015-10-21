@@ -3,7 +3,7 @@
 
 struct context *s_ctx = NULL;
 const int TIMEOUT_IN_MS = 500; /* ms */
-const int ifclient = 0;
+const int client = 0;
 
 int main(int argc, char **argv)
 {
@@ -23,7 +23,7 @@ int main(int argc, char **argv)
 
   port = ntohs(rdma_get_src_port(listener));
 
-  printf("listening on port %d.\n", port);
+  printf("Server listening on port %d.\n", port);
 
   while (rdma_get_cm_event(ec, &event) == 0) {
     struct rdma_cm_event event_copy;

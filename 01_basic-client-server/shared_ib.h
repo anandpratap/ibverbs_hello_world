@@ -48,6 +48,7 @@ int on_event(struct rdma_cm_event *event);
 // client specific
 int on_route_resolved(struct rdma_cm_id *id);
 int on_addr_resolved(struct rdma_cm_id *id);
+void on_completion_client(struct ibv_wc *wc);
 int on_connection_client(void *context);
 int on_disconnect_client(struct rdma_cm_id *id);
 

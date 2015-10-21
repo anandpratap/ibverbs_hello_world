@@ -12,7 +12,6 @@ void build_context(struct ibv_context *verbs)
 	if (s_ctx) {
 		if (s_ctx->ctx != verbs)
 			die("cannot handle events in more than one context.");
-
 		return;
 	}
 
@@ -55,7 +54,12 @@ void * poll_cq(void *ctx)
 		TEST_NZ(ibv_req_notify_cq(cq, 0));
 
 		while (ibv_poll_cq(cq, 1, &wc))
-			on_completion(&wc);
+			if(client){
+				on_completion_client(&wc);
+			}
+			else{
+				on_completion(&wc);
+			}
 	}
 
 	return NULL;
@@ -82,10 +86,9 @@ void post_receives(struct connection *conn)
 void register_memory(struct connection *conn)
 {
 	struct timespec tstart={0,0}, tend={0,0};
-	clock_gettime(CLOCK_MONOTONIC, &tstart);
 	conn->send_region = malloc(BUFFER_SIZE);
 	conn->recv_region = malloc(BUFFER_SIZE);
-	
+	clock_gettime(CLOCK_MONOTONIC, &tstart);
 	TEST_Z(conn->send_mr = ibv_reg_mr(
 					  s_ctx->pd, 
 					  conn->send_region, 
@@ -99,9 +102,9 @@ void register_memory(struct connection *conn)
 					  IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE));
 
 	clock_gettime(CLOCK_MONOTONIC, &tend);
-	printf("some_long_computation took about %.5f seconds\n",
-	       ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - 
-	       ((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec));
+	printf("memory registration took about %.8f micro seconds\n",
+	       (((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - 
+		((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec))*1e6);
 }
 
 
@@ -127,7 +130,6 @@ void on_completion_client(struct ibv_wc *wc)
 
 	if (wc->status != IBV_WC_SUCCESS)
 		die("on_completion: status is not IBV_WC_SUCCESS.");
-
 	if (wc->opcode & IBV_WC_RECV)
 		printf("received message: %s\n", conn->recv_region);
 	else if (wc->opcode == IBV_WC_SEND)
@@ -227,8 +229,17 @@ int on_disconnect(struct rdma_cm_id *id)
 
 	rdma_destroy_qp(id);
 
+	struct timespec tstart={0,0}, tend={0,0};
+	clock_gettime(CLOCK_MONOTONIC, &tstart);
+	
 	ibv_dereg_mr(conn->send_mr);
 	ibv_dereg_mr(conn->recv_mr);
+
+	clock_gettime(CLOCK_MONOTONIC, &tend);
+	printf("memory de-registration took about %.8f micro seconds\n",
+	       (((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - 
+		((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec))*1e6);
+
 
 	free(conn->send_region);
 	free(conn->recv_region);
@@ -246,10 +257,19 @@ int on_disconnect_client(struct rdma_cm_id *id)
 	
 	printf("disconnected.\n");
 	rdma_destroy_qp(id);
+
+	struct timespec tstart={0,0}, tend={0,0};
+	clock_gettime(CLOCK_MONOTONIC, &tstart);
 	
 	ibv_dereg_mr(conn->send_mr);
 	ibv_dereg_mr(conn->recv_mr);
-	
+
+	clock_gettime(CLOCK_MONOTONIC, &tend);
+	printf("memory de-registration took about %.8f micro seconds\n",
+	       (((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - 
+		((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec))*1e6);
+
+
 	free(conn->send_region);
 	free(conn->recv_region);
 	
@@ -270,13 +290,13 @@ int on_event(struct rdma_cm_event *event)
 		r = on_connect_request(event->id);
 	}
 	else if (event->event == RDMA_CM_EVENT_ESTABLISHED){
-		if(ifclient)
+		if(client)
 			r = on_connection_client(event->id->context);
 		else
 			r = on_connection(event->id->context);
 	}
 	else if (event->event == RDMA_CM_EVENT_DISCONNECTED){
-		if(ifclient)
+		if(client)
 			r = on_disconnect_client(event->id);
 		else
 			r = on_disconnect(event->id);
