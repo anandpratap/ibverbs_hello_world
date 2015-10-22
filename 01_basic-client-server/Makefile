@@ -2,7 +2,7 @@
 
 LDLIBS = -lrdmacm -libverbs -lpthread -lrt
 CC = gcc
-CFLAGS = -Wall
+CFLAGS = -Wall -O3
 OBJS = server.o shared_ib.o
 OBJC = client.o shared_ib.o
 
