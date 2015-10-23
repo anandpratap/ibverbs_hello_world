@@ -26,8 +26,11 @@ class RDMACommon {
     public:
         RDMACommon();
         RDMAConnection* CreateConnection(struct rdma_cm_id* id);
-        static void* PollCompletionQueue();
     private:
+        static void* PollCompletionQueue();
+        static void OnCompletion(struct ibv_wc* work_completion);
+        static void OnSendCompletion(struct ibv_wc* work_completion);
+        static void OnRDMAWrite
 };
 
 }
