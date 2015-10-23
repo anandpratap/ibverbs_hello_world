@@ -1,14 +1,15 @@
 #include "utils.h"
 void calc_message_numerical(struct message_numerical *msg){
-	std::default_random_engine de(time(0)); 
-	std::normal_distribution<double> distribution(0.0, 1.0);
+	std::random_device rd;
+	std::uniform_int_distribution<int> dist(1,127);
 	int size = MESSAGE_SIZE;
-	char sum = 0;
-	for(int i=0; i<size-1; i++){
-		msg->x[i] = distribution(de);
+	int sum = 0;
+	for(int i=0; i<size-4; i++){
+		msg->x[i] = dist(rd);
 		sum += msg->x[i];
 	}
-	msg->x[size-1] = sum;
+
+	memcpy(&msg->x[size-4], &sum, sizeof(int));
 	std::cout<<"Message generated, sum "<<sum<<std::endl;
 }
 
@@ -16,10 +17,13 @@ void verify_message_numerical(struct message_numerical *msg){
 	std::cout<<"SANITY CHECK...";
 
 	int size = MESSAGE_SIZE;
-	char sum = 0;
-	for(int i=0; i<size-1; i++){
+	int sum = 0;
+	int sum_orig; 
+	for(int i=0; i<size-4; i++){
 		sum += msg->x[i];
 	}
-	assert(msg->x[size-1] == sum);
+	memcpy(&sum_orig,  &msg->x[size-4], sizeof(int));
+	
+	assert(sum_orig == sum);
 	std::cout<<"PASSED."<<std::endl;
 }

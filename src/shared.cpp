@@ -10,14 +10,12 @@ Process::~Process(){
 
 void Process::build_context(struct ibv_context *verbs){
 	if (s_ctx) {
-		if (s_ctx->ctx != verbs){
-			std::cout<<s_ctx->ctx<<" "<<verbs<<std::endl;
+		if (s_ctx->ctx != verbs)
 			die("cannot handle events in more than one context.");
-		}
 		return;
 	}
 
-	s_ctx = (struct context *)malloc(sizeof(struct context));
+	s_ctx = new context();
 	s_ctx->ctx = verbs;
 
 	TEST_Z(s_ctx->pd = ibv_alloc_pd(s_ctx->ctx));
@@ -51,7 +49,7 @@ void* Process::poll_cq_thunk(void* self){
 
 
 void Process::build_qp_attr(){
-	memset(&qp_attr, 0, sizeof(qp_attr));
+	memsetzero(&qp_attr);
 
 	(&qp_attr)->send_cq = s_ctx->cq;
 	(&qp_attr)->recv_cq = s_ctx->cq;
@@ -83,8 +81,8 @@ void Process::post_receives(){
 
 void Process::register_memory(){
 	struct timespec tstart={0,0}, tend={0,0};
-	conn->send_region = (char *) malloc(BUFFER_SIZE);
-	conn->recv_region = (char *) malloc(BUFFER_SIZE);
+	conn->send_region = new char[BUFFER_SIZE];
+	conn->recv_region = new char[BUFFER_SIZE];
 	clock_gettime(CLOCK_MONOTONIC, &tstart);
 	TEST_Z(conn->send_mr = ibv_reg_mr(
 					  s_ctx->pd, 
@@ -104,21 +102,45 @@ void Process::register_memory(){
 		((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec))*1e6);
 }
 
+void Process::on_completion_wc_recv(struct ibv_wc *wc){
+	struct message_numerical* recv_message = (struct message_numerical *) conn->recv_region;
+	int sum = 0;
+	memcpy(&sum, &(recv_message->x[MESSAGE_SIZE-4]), sizeof(int));
+	std::cout<<"Sum of received message :"<<sum<<std::endl;
+	verify_message_numerical(recv_message);
+	conn->num_completions++;
+}
+
+void Process::on_completion_wc_send(struct ibv_wc *wc){
+	std::cout<<"Request sent on completion."<<std::endl;
+}
+
+void Process::on_completion_not_implemented(struct ibv_wc *wc){
+	std::cout<<"On completion response for this request is not implemented."<<std::endl;
+	die("Killing myself..");
+}
 
 void Process::on_completion(struct ibv_wc *wc){
 	if (wc->status != IBV_WC_SUCCESS)
 		die("on_completion: status is not IBV_WC_SUCCESS.");
-	
-	if (wc->opcode & IBV_WC_RECV) {
-		struct connection *wconn = (struct connection *)(uintptr_t)wc->wr_id;
-		struct message_numerical* recv_message = (struct message_numerical *) wconn->recv_region;
-		std::cout<<"Sum of received message "<<recv_message->x[MESSAGE_SIZE-1]<<std::endl;
-		verify_message_numerical(recv_message);
-		conn->num_completions++;
-		
-	} else if (wc->opcode == IBV_WC_SEND) {
-		printf("send completed successfully.\n");
-	}
+	if (wc->opcode == IBV_WC_RECV)
+		on_completion_wc_recv(wc);
+	else if (wc->opcode == IBV_WC_SEND) 
+		on_completion_wc_send(wc);
+	else if (wc->opcode == IBV_WC_COMP_SWAP) 
+		on_completion_not_implemented(wc);
+	else if (wc->opcode == IBV_WC_FETCH_ADD) 
+		on_completion_not_implemented(wc);
+	else if (wc->opcode == IBV_WC_BIND_MW) 
+		on_completion_not_implemented(wc);
+	else if (wc->opcode == IBV_WC_RDMA_WRITE) 
+		on_completion_not_implemented(wc);
+	else if (wc->opcode == IBV_WC_RDMA_READ) 
+		on_completion_not_implemented(wc);
+	else if (wc->opcode == IBV_WC_RECV_RDMA_WITH_IMM) 
+		on_completion_not_implemented(wc);
+	else
+		die("wc->opcode not recognised.");
 }
 
 
@@ -127,12 +149,11 @@ int Process::on_connection(void *context)
 	struct connection *ctx_conn = (struct connection *)context;
 	struct ibv_send_wr wr, *bad_wr = NULL;
 	struct ibv_sge sge;
-	
-	snprintf(ctx_conn->send_region, BUFFER_SIZE, (char *) &message);
+	memcpy(ctx_conn->send_region, &message, BUFFER_SIZE*sizeof(char));
 	printf("connected. posting send...\n");
 	
-	memset(&wr, 0, sizeof(wr));
-	
+	memsetzero(&wr);
+
 	wr.wr_id = (uintptr_t)ctx_conn;
 	wr.opcode = IBV_WR_SEND;
 	wr.sg_list = &sge;
@@ -166,10 +187,10 @@ int Process::on_disconnect(struct rdma_cm_id *id){
 		((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec))*1e6);
 
 
-	free(conn->send_region);
-	free(conn->recv_region);
+	delete[] conn->send_region;
+	delete[] conn->recv_region;
 
-	free(conn);
+	delete[] conn;
 	rdma_destroy_id(id);
 	return 0;
 }
@@ -178,7 +199,7 @@ int Process::on_disconnect(struct rdma_cm_id *id){
 int Process::on_route_resolved(struct rdma_cm_id *id){
 	struct rdma_conn_param cm_params;
 	printf("route resolved.\n");
-	memset(&cm_params, 0, sizeof(cm_params));
+	memsetzero(&cm_params);
 	TEST_NZ(rdma_connect(id, &cm_params));
 	return 0;
 }
@@ -191,7 +212,7 @@ int Process::on_addr_resolved(struct rdma_cm_id *id){
 
 	TEST_NZ(rdma_create_qp(id, s_ctx->pd, &qp_attr));
 
-	id->context = conn = (struct connection *)malloc(sizeof(struct connection));
+	id->context = conn = new connection();
 
 	conn->id = id;
 	conn->qp = id->qp;
@@ -230,6 +251,7 @@ int Process::on_event(struct rdma_cm_event *event){
 		r = on_route_resolved(event->id);
 	}
 	else{
+		std::cout<<event->event<<std::endl;
 		die("on_event: unknown event.");
 	}
 	return r;
@@ -245,13 +267,13 @@ int Process::on_connect_request(struct rdma_cm_id *id){
 
 	TEST_NZ(rdma_create_qp(id, s_ctx->pd, &qp_attr));
 
-	id->context = conn = (struct connection *)malloc(sizeof(struct connection));
+	id->context = conn = new connection();
 	conn->qp = id->qp;
 
 	register_memory();
 	post_receives();
 
-	memset(&cm_params, 0, sizeof(cm_params));
+	memsetzero(&cm_params);
 	TEST_NZ(rdma_accept(id, &cm_params));
 
 	return 0;
@@ -260,8 +282,8 @@ int Process::on_connect_request(struct rdma_cm_id *id){
 
 void Process::go(){
 	calc_message_numerical(&message);
-
-	memset(&addr, 0, sizeof(addr));
+	std::cout<<"Sizeof " << sizeof(message_numerical)<<std::endl;
+	memsetzero(&addr);
 	addr.sin6_family = AF_INET6;
 	addr.sin6_port = htons(DEFAULT_PORT);
 	TEST_Z(ec = rdma_create_event_channel());

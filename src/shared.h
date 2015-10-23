@@ -14,9 +14,9 @@
 #define STR(x) STR_HELPER(x)
 
 
-#define TIMEOUT_IN_MS 50
+#define TIMEOUT_IN_MS 500
 #define MESSAGE_SIZE 50000
-#define BUFFER_SIZE MESSAGE_SIZE + 100
+#define BUFFER_SIZE (MESSAGE_SIZE)
 
 #define DEFAULT_ADDRESS "localhost"
 #define DEFAULT_PORT 48105
@@ -100,6 +100,9 @@ public:
 	
 	//
 	void on_completion(struct ibv_wc *wc);
+	void on_completion_wc_recv(struct ibv_wc *wc);
+	void on_completion_wc_send(struct ibv_wc *wc);
+	void on_completion_not_implemented(struct ibv_wc *wc);
 };
 
 
