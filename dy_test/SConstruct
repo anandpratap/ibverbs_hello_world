@@ -1,0 +1,5 @@
+#!python
+env = Environment()
+sources = ['ifaddr_test.cpp', 'network_info.cc']
+env.Program(target='ifaddr_test', source= sources)
+
