@@ -110,9 +110,11 @@ void Process::on_completion(struct ibv_wc *wc){
 		die("on_completion: status is not IBV_WC_SUCCESS.");
 	
 	if (wc->opcode & IBV_WC_RECV) {
-		struct connection *conn = (struct connection *)(uintptr_t)wc->wr_id;
-		
-		printf("received message: %s\n", conn->recv_region);
+		struct connection *wconn = (struct connection *)(uintptr_t)wc->wr_id;
+		struct message_numerical* recv_message = (struct message_numerical *) wconn->recv_region;
+		std::cout<<"Sum of received message "<<recv_message->x[MESSAGE_SIZE-1]<<std::endl;
+		verify_message_numerical(recv_message);
+		conn->num_completions++;
 		
 	} else if (wc->opcode == IBV_WC_SEND) {
 		printf("send completed successfully.\n");
@@ -126,8 +128,7 @@ int Process::on_connection(void *context)
 	struct ibv_send_wr wr, *bad_wr = NULL;
 	struct ibv_sge sge;
 	
-	snprintf(ctx_conn->send_region, BUFFER_SIZE, "message from active/client side with pid %d", getpid());
-	
+	snprintf(ctx_conn->send_region, BUFFER_SIZE, (char *) &message);
 	printf("connected. posting send...\n");
 	
 	memset(&wr, 0, sizeof(wr));
@@ -149,8 +150,6 @@ int Process::on_connection(void *context)
 
 
 int Process::on_disconnect(struct rdma_cm_id *id){
-	struct connection *conn = (struct connection *)id->context;
-
 	printf("peer disconnected.\n");
 
 	rdma_destroy_qp(id);
@@ -260,6 +259,8 @@ int Process::on_connect_request(struct rdma_cm_id *id){
 
 
 void Process::go(){
+	calc_message_numerical(&message);
+
 	memset(&addr, 0, sizeof(addr));
 	addr.sin6_family = AF_INET6;
 	addr.sin6_port = htons(DEFAULT_PORT);
@@ -279,6 +280,8 @@ void Process::go(){
 }
 
 void ClientProcess::go(){
+	calc_message_numerical(&message);
+	
 	TEST_NZ(getaddrinfo(DEFAULT_ADDRESS, DEFAULT_PORT_S, NULL, &addri));
 	TEST_Z(ec = rdma_create_event_channel());
 	TEST_NZ(rdma_create_id(ec, &conn_id, NULL, RDMA_PS_TCP));

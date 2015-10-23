@@ -8,16 +8,21 @@
 #include <rdma/rdma_cma.h>
 #include <netdb.h>
 #include <iostream>
-
-#define BUFFER_SIZE 1024
-#define TIMEOUT_IN_MS 50
+#include "utils.h"
 
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
 
+
+#define TIMEOUT_IN_MS 50
+#define MESSAGE_SIZE 50000
+#define BUFFER_SIZE MESSAGE_SIZE + 100
+
 #define DEFAULT_ADDRESS "localhost"
 #define DEFAULT_PORT 48105
 #define DEFAULT_PORT_S STR(DEFAULT_PORT)
+
+
 
 inline void die(const char *reason){
 	fprintf(stderr, "%s\n", reason);
@@ -26,6 +31,10 @@ inline void die(const char *reason){
 
 #define TEST_NZ(x) do { if ( (x)) die("error: " #x " failed (returned non-zero)." ); } while (0)
 #define TEST_Z(x)  do { if (!(x)) die("error: " #x " failed (returned zero/null)."); } while (0)
+
+struct message_numerical{
+	char x[MESSAGE_SIZE];
+};
 
 struct context {
 	struct ibv_context *ctx;
@@ -62,6 +71,8 @@ public:
 	struct rdma_cm_event *event = NULL;
 	struct rdma_cm_id *conn_id = NULL;
 	struct rdma_event_channel *ec = NULL;
+	struct message_numerical message;
+	
 	uint16_t port = 0;
 
 	Process();

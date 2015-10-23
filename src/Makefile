@@ -2,9 +2,9 @@
 
 LDLIBS = -lrdmacm -libverbs -lpthread -lrt
 CC = g++
-CFLAGS = -Wall -O3 -std=c++11 -g
-OBJS = server.o shared.o
-OBJC = client.o shared.o
+CFLAGS = -Wall -O3 -std=c++11
+OBJS = server.o shared.o utils.o
+OBJC = client.o shared.o utils.o
 
 %.o: %.cpp
 	${CC} ${CFLAGS} -c -o $@ $<
