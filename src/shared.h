@@ -8,6 +8,8 @@
 #include <rdma/rdma_cma.h>
 #include <netdb.h>
 #include <iostream>
+#include <fstream>
+#include <map>
 #include "utils.h"
 
 #define STR_HELPER(x) #x
@@ -15,7 +17,7 @@
 
 
 #define TIMEOUT_IN_MS 500
-#define MESSAGE_SIZE 50000
+#define MESSAGE_SIZE 500000
 #define BUFFER_SIZE (MESSAGE_SIZE)
 
 #define DEFAULT_ADDRESS "localhost"
@@ -73,7 +75,9 @@ public:
 	struct rdma_event_channel *ec = NULL;
 	struct message_numerical message;
 	
+	std::ofstream timelogfile;
 	uint16_t port = 0;
+	int client;
 
 	Process();
 	~Process();
@@ -103,6 +107,13 @@ public:
 	void on_completion_wc_recv(struct ibv_wc *wc);
 	void on_completion_wc_send(struct ibv_wc *wc);
 	void on_completion_not_implemented(struct ibv_wc *wc);
+
+	//
+	void event_loop();
+
+	// 
+	int post_send();
+
 };
 
 

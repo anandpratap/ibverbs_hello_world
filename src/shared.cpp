@@ -1,11 +1,11 @@
 #include "shared.h"
 Process::Process(){
-	
+	client = 0;
 }
 
 Process::~Process(){
-	rdma_destroy_id(conn_id);
-	rdma_destroy_event_channel(ec);	
+	// rdma_destroy_id(conn_id);
+	// rdma_destroy_event_channel(ec);	
 }
 
 void Process::build_context(struct ibv_context *verbs){
@@ -80,7 +80,9 @@ void Process::post_receives(){
 
 
 void Process::register_memory(){
+	double dt;
 	struct timespec tstart={0,0}, tend={0,0};
+
 	conn->send_region = new char[BUFFER_SIZE];
 	conn->recv_region = new char[BUFFER_SIZE];
 	clock_gettime(CLOCK_MONOTONIC, &tstart);
@@ -97,22 +99,32 @@ void Process::register_memory(){
 					  IBV_ACCESS_LOCAL_WRITE | IBV_ACCESS_REMOTE_WRITE));
 	
 	clock_gettime(CLOCK_MONOTONIC, &tend);
+	dt = ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - 
+		((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec);
 	printf("memory registration took about %.8f micro seconds\n",
-	       (((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - 
-		((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec))*1e6);
+	       dt);
+
+	if(client)
+		timelogfile.open("client_time.log", std::ios::app);
+	else
+		timelogfile.open("server_time.log", std::ios::app);
+	timelogfile<<"REG:" <<dt<<std::endl;
+	timelogfile.close();
 }
 
 void Process::on_completion_wc_recv(struct ibv_wc *wc){
 	struct message_numerical* recv_message = (struct message_numerical *) conn->recv_region;
 	int sum = 0;
 	memcpy(&sum, &(recv_message->x[MESSAGE_SIZE-4]), sizeof(int));
-	std::cout<<"Sum of received message :"<<sum<<std::endl;
+	std::cout<<"RECV COUNT: "<<conn->num_completions << " SUM:"<<sum<<std::endl;
 	verify_message_numerical(recv_message);
-	conn->num_completions++;
+	//post_send();
 }
+
 
 void Process::on_completion_wc_send(struct ibv_wc *wc){
 	std::cout<<"Request sent on completion."<<std::endl;
+	//post_receives();
 }
 
 void Process::on_completion_not_implemented(struct ibv_wc *wc){
@@ -121,8 +133,8 @@ void Process::on_completion_not_implemented(struct ibv_wc *wc){
 }
 
 void Process::on_completion(struct ibv_wc *wc){
-	if (wc->status != IBV_WC_SUCCESS)
-		die("on_completion: status is not IBV_WC_SUCCESS.");
+	if (wc->status)
+		resolve_wc_error(wc->status);
 	if (wc->opcode == IBV_WC_RECV)
 		on_completion_wc_recv(wc);
 	else if (wc->opcode == IBV_WC_SEND) 
@@ -141,31 +153,42 @@ void Process::on_completion(struct ibv_wc *wc){
 		on_completion_not_implemented(wc);
 	else
 		die("wc->opcode not recognised.");
+	
+	conn->num_completions++;
+	if((conn->num_completions) == 2 && client){
+		rdma_disconnect(conn->id);
+	}
 }
 
 
-int Process::on_connection(void *context)
-{
-	struct connection *ctx_conn = (struct connection *)context;
+int Process::post_send(){
 	struct ibv_send_wr wr, *bad_wr = NULL;
 	struct ibv_sge sge;
-	memcpy(ctx_conn->send_region, &message, BUFFER_SIZE*sizeof(char));
+	calc_message_numerical(&message);
+	
+	memcpy(conn->send_region, &message, BUFFER_SIZE*sizeof(char));
 	printf("connected. posting send...\n");
 	
 	memsetzero(&wr);
 
-	wr.wr_id = (uintptr_t)ctx_conn;
+	wr.wr_id = (uintptr_t)conn;
 	wr.opcode = IBV_WR_SEND;
 	wr.sg_list = &sge;
 	wr.num_sge = 1;
 	wr.send_flags = IBV_SEND_SIGNALED;
 	
-	sge.addr = (uintptr_t)ctx_conn->send_region;
+	sge.addr = (uintptr_t)conn->send_region;
 	sge.length = BUFFER_SIZE;
-	sge.lkey = ctx_conn->send_mr->lkey;
+	sge.lkey = conn->send_mr->lkey;
 	
-	TEST_NZ(ibv_post_send(ctx_conn->qp, &wr, &bad_wr));
+	TEST_NZ(ibv_post_send(conn->qp, &wr, &bad_wr));
 	
+	return 0;
+}
+
+int Process::on_connection(void *context)
+{
+	post_send();
 	return 0;
 }
 
@@ -176,23 +199,35 @@ int Process::on_disconnect(struct rdma_cm_id *id){
 	rdma_destroy_qp(id);
 
 	struct timespec tstart={0,0}, tend={0,0};
+	double dt;
 	clock_gettime(CLOCK_MONOTONIC, &tstart);
 	
 	ibv_dereg_mr(conn->send_mr);
 	ibv_dereg_mr(conn->recv_mr);
 
 	clock_gettime(CLOCK_MONOTONIC, &tend);
-	printf("memory de-registration took about %.8f micro seconds\n",
-	       (((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - 
-		((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec))*1e6);
+	dt = ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - 
+		((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec);
 
+	printf("memory de-registration took about %.8f micro seconds\n",
+	       dt);
+
+	if(client)
+		timelogfile.open("client_time.log", std::ios::app);
+	else
+		timelogfile.open("server_time.log", std::ios::app);
+	timelogfile<<"DEREG:" <<dt<<std::endl;
+	timelogfile.close();
 
 	delete[] conn->send_region;
 	delete[] conn->recv_region;
 
 	delete[] conn;
 	rdma_destroy_id(id);
-	return 0;
+	if(client)
+		return 1;
+	else
+		return 0;
 }
 
 
@@ -250,6 +285,26 @@ int Process::on_event(struct rdma_cm_event *event){
 		std::cout<<"EVENT:ROUTE_RESOLVED"<<std::endl;
 		r = on_route_resolved(event->id);
 	}
+	else if (event->event == RDMA_CM_EVENT_ADDR_ERROR){
+		std::cout<<"EVENT:ADDRESS_RESOLVED_FAIL"<<std::endl;
+		exit(EXIT_FAILURE);
+	}
+	else if (event->event == RDMA_CM_EVENT_ROUTE_ERROR){
+		std::cout<<"EVENT:ROUTE_RESOLVED_FAIL"<<std::endl;     
+		exit(EXIT_FAILURE);
+	}
+	else if (event->event == RDMA_CM_EVENT_CONNECT_ERROR){
+		std::cout<<"EVENT:ROUTE_CONNECT_FAIL"<<std::endl;
+		exit(EXIT_FAILURE);
+	}
+	else if (event->event == RDMA_CM_EVENT_UNREACHABLE){
+		std::cout<<"EVENT:UNREACHABLE"<<std::endl;
+		exit(EXIT_FAILURE);
+	}
+	else if (event->event == RDMA_CM_EVENT_REJECTED){
+		std::cout<<"EVENT:REJECTED May be the server is not online?"<<std::endl;
+		exit(EXIT_FAILURE);
+	}
 	else{
 		std::cout<<event->event<<std::endl;
 		die("on_event: unknown event.");
@@ -280,19 +335,10 @@ int Process::on_connect_request(struct rdma_cm_id *id){
 }
 
 
-void Process::go(){
-	calc_message_numerical(&message);
-	std::cout<<"Sizeof " << sizeof(message_numerical)<<std::endl;
-	memsetzero(&addr);
-	addr.sin6_family = AF_INET6;
-	addr.sin6_port = htons(DEFAULT_PORT);
-	TEST_Z(ec = rdma_create_event_channel());
-	TEST_NZ(rdma_create_id(ec, &conn_id, NULL, RDMA_PS_TCP));
-	TEST_NZ(rdma_bind_addr(conn_id, (struct sockaddr *)&addr));
-	TEST_NZ(rdma_listen(conn_id, 10)); /* backlog=10 is arbitrary */
-	port = ntohs(rdma_get_src_port(conn_id));
-	printf("Server listening on port %d.\n", port);
+void Process::event_loop(){
 	while (rdma_get_cm_event(ec, &event) == 0) {
+		// create a copy of the event and acknowledge
+		// acknowledgement is important
 		struct rdma_cm_event event_copy;
 		memcpy(&event_copy, event, sizeof(*event));
 		rdma_ack_cm_event(event);
@@ -301,20 +347,42 @@ void Process::go(){
 	}
 }
 
-void ClientProcess::go(){
-	calc_message_numerical(&message);
+
+
+void Process::go(){
+	// set port for the server
+	memsetzero(&addr);
+	addr.sin6_family = AF_INET6;
+	addr.sin6_port = htons(DEFAULT_PORT);
 	
-	TEST_NZ(getaddrinfo(DEFAULT_ADDRESS, DEFAULT_PORT_S, NULL, &addri));
-	TEST_Z(ec = rdma_create_event_channel());
-	TEST_NZ(rdma_create_id(ec, &conn_id, NULL, RDMA_PS_TCP));
-	TEST_NZ(rdma_resolve_addr(conn_id, NULL, addri->ai_addr, TIMEOUT_IN_MS));
-  	freeaddrinfo(addri);
+	// create event channel, connection identifier, bind that to the address, 
+	// and start listening
+	ec = rdma_create_event_channel();
+	rdma_create_id(ec, &conn_id, NULL, RDMA_PS_TCP);
+	rdma_bind_addr(conn_id, (struct sockaddr *)&addr);
+	rdma_listen(conn_id, 10);
+	port = ntohs(rdma_get_src_port(conn_id));
+
+	std::cout<<"SERVER:PORT "<<port<<std::endl;
+	
+	event_loop();
+
+}
+
+void ClientProcess::go(){
+	client = 1;
+	// set port for the server
+	getaddrinfo(DEFAULT_ADDRESS, DEFAULT_PORT_S, NULL, &addri);
+	
+	// create event channel, connection identifier, and post resolve address 
+	ec = rdma_create_event_channel();
+	rdma_create_id(ec, &conn_id, NULL, RDMA_PS_TCP);
+	rdma_resolve_addr(conn_id, NULL, addri->ai_addr, TIMEOUT_IN_MS);
+
+  	// free address info
+	freeaddrinfo(addri);
+
 	std::cout<<"CLIENT:PORT "<<DEFAULT_PORT_S<<std::endl;
-	while (rdma_get_cm_event(ec, &event) == 0){
-		struct rdma_cm_event event_copy;
-		memcpy(&event_copy, event, sizeof(*event));
-		rdma_ack_cm_event(event);
-		if (on_event(&event_copy))
-			break;
-	}
+	
+	event_loop();
 }

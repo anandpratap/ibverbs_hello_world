@@ -19,4 +19,5 @@ void memsetzero(T *x){
 	memset(x, 0, sizeof(*x));
 }
 
+void resolve_wc_error(ibv_wc_status status);
 #endif
