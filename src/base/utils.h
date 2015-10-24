@@ -1,15 +1,16 @@
-#ifndef UTILS_H
-#define UTILS_H
+#ifndef BASE_UTILS_H
+#define BASE_UTILS_H
 #include <random>
 #include <cassert>
-#include "shared.h"
+#include "utils.h"
+#include "process.h"
 
 
 void calc_message_numerical(struct message_numerical *msg);
 void verify_message_numerical(struct message_numerical *msg);
 
-template <class SomeType>
-SomeType sum (SomeType a, SomeType b)
+template <class T>
+T sum(T a, T b)
 {
   return a+b;
 }

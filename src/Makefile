@@ -2,9 +2,9 @@
 
 LDLIBS = -lrdmacm -libverbs -lpthread -lrt
 CC = g++
-CFLAGS = -Wall -O0 -std=c++11
-OBJS = server.o shared.o utils.o
-OBJC = client.o shared.o utils.o
+CFLAGS = -Wall -O0 -std=c++11 -g
+OBJS = base/server.o base/process.o base/process_on_completions.o base/process_connections.o base/process_events.o base/process_comm_recv.o base/process_comm_send.o base/utils.o
+OBJC = base/client.o base/process.o base/process_on_completions.o base/process_connections.o base/process_events.o base/process_comm_recv.o base/process_comm_send.o base/utils.o
 
 all: server client
 
@@ -19,4 +19,4 @@ client: ${OBJC}
 	mv client ../bin/.
 
 clean:
-	rm *.o ../bin/server ../bin/client
+	rm base/*.o ../bin/server ../bin/client

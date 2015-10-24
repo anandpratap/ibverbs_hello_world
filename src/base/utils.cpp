@@ -1,4 +1,7 @@
+#include "include.h"
 #include "utils.h"
+#include "process.h"
+
 void calc_message_numerical(struct message_numerical *msg){
 	std::random_device rd;
 	std::uniform_int_distribution<int> dist(1,127);
