@@ -65,6 +65,5 @@ void logevent(std::string logfilename, char* msg){
 	std::ofstream logfile;
 	logfile.open(logfilename, std::ios::app);
 	logfile<<msg<<std::endl;
-	std::cout<<logfilename<<std::endl;
 	logfile.close();
 }
