@@ -5,11 +5,18 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <rdma/rdma_cma.h>
-#include <netdb.h>
 #include <iostream>
 #include <fstream>
 #include <map>
+#include <random>
+#include <cassert>
+#include <string>
+
+
+#include <rdma/rdma_cma.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+
 #define STR_HELPER(x) #x
 #define STR(x) STR_HELPER(x)
 
@@ -22,6 +29,7 @@
 #define DEFAULT_PORT 48105
 #define DEFAULT_PORT_S STR(DEFAULT_PORT)
 
+#define SERVER_ADDRESS_STR "10.255.4.162"
 
 
 inline void die(const char *reason){

@@ -59,3 +59,12 @@ void resolve_wc_error(ibv_wc_status status){
 	std::cout<<"WC ERROR:"<<wc_status_map[(int)status]<<std::endl;
 	exit(EXIT_FAILURE);
 }
+
+
+void logevent(std::string logfilename, char* msg){
+	std::ofstream logfile;
+	logfile.open(logfilename, std::ios::app);
+	logfile<<msg<<std::endl;
+	std::cout<<logfilename<<std::endl;
+	logfile.close();
+}

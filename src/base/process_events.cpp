@@ -1,103 +1,18 @@
 #include "include.h"
 #include "utils.h"
 #include "process.h"
-void Process::poll_cq(void *ctx){
-	struct ibv_wc wc;
-	
-	while (1) {
-		TEST_NZ(ibv_get_cq_event(s_ctx->completion_channel, &s_ctx->completion_queue, &ctx));
-		ibv_ack_cq_events(s_ctx->completion_queue, 1);
-		TEST_NZ(ibv_req_notify_cq(s_ctx->completion_queue, 0));
-		while (ibv_poll_cq(s_ctx->completion_queue, 1, &wc)){
-			on_completion(&wc);
-		}
+
+void Process::event_loop(){
+	while (rdma_get_cm_event(this->event_channel, &event) == 0){
+		// create a copy of the event and acknowledge
+		// acknowledgement is important
+		struct rdma_cm_event event_copy;
+		memcpy(&event_copy, event, sizeof(*event));
+		rdma_ack_cm_event(event);
+		if (on_event(&event_copy))
+			break;
 	}
 }
-
-
-void* Process::poll_cq_thunk(void* self){
-	void *ptr = NULL;
- 	static_cast<Process*>(self)->poll_cq(ptr);
-	return NULL;
-}
-
-int Process::on_connection(void *context)
-{
-	post_send();
-	return 0;
-}
-
-
-int Process::on_disconnect(struct rdma_cm_id *id){
-	printf("peer disconnected.\n");
-
-	rdma_destroy_qp(id);
-
-	struct timespec tstart={0,0}, tend={0,0};
-	double dt;
-	clock_gettime(CLOCK_MONOTONIC, &tstart);
-	
-	ibv_dereg_mr(connection_->send_memory_region);
-	ibv_dereg_mr(connection_->recv_memory_region);
-
-	clock_gettime(CLOCK_MONOTONIC, &tend);
-	dt = ((double)tend.tv_sec + 1.0e-9*tend.tv_nsec) - 
-		((double)tstart.tv_sec + 1.0e-9*tstart.tv_nsec);
-
-	printf("memory de-registration took about %.8f micro seconds\n",
-	       dt);
-
-	if(client)
-		timelogfile.open("client_time.log", std::ios::app);
-	else
-		timelogfile.open("server_time.log", std::ios::app);
-	timelogfile<<"DEREG:" <<dt<<std::endl;
-	timelogfile.close();
-
-	delete[] connection_->send_region;
-	delete[] connection_->recv_region;
-
-	delete[] connection_;
-	rdma_destroy_id(id);
-	if(client)
-		return 1;
-	else
-		return 0;
-}
-
-
-int Process::on_route_resolved(struct rdma_cm_id *id){
-	struct rdma_conn_param connection_manager_params;
-	printf("route resolved.\n");
-	memsetzero(&connection_manager_params);
-	TEST_NZ(rdma_connect(id, &connection_manager_params));
-	return 0;
-}
-
-
-int Process::on_address_resolved(struct rdma_cm_id *id){
-	printf("address resolved.\n");
-	build_context(id->verbs);
-	build_queue_pair_attributes();
-	
-	TEST_NZ(rdma_create_qp(id, s_ctx->protection_domain, &this->queue_pair_attributes));
-	
-	id->context = connection_ = new connection();
-	
-	connection_->identifier = id;
-	connection_->queue_pair = id->qp;
-	connection_->number_of_recvs = 0;
-	connection_->number_of_sends = 0;
-	
-	register_memory();
-	post_recvs();
-	
-	TEST_NZ(rdma_resolve_route(id, TIMEOUT_IN_MS));
-	
-	return 0;
-}
-
-
 
 int Process::on_event(struct rdma_cm_event *event){
 	int r = 0;
@@ -148,6 +63,66 @@ int Process::on_event(struct rdma_cm_event *event){
 	return r;
 }
 
+void Process::poll_cq(void *ctx){
+	struct ibv_wc wc;
+	
+	while (1) {
+		TEST_NZ(ibv_get_cq_event(s_ctx->completion_channel, &s_ctx->completion_queue, &ctx));
+		ibv_ack_cq_events(s_ctx->completion_queue, 1);
+		TEST_NZ(ibv_req_notify_cq(s_ctx->completion_queue, 0));
+		while (ibv_poll_cq(s_ctx->completion_queue, 1, &wc)){
+			on_completion(&wc);
+		}
+	}
+}
+
+
+void* Process::poll_cq_thunk(void* self){
+	void *ptr = NULL;
+ 	static_cast<Process*>(self)->poll_cq(ptr);
+	return NULL;
+}
+
+int Process::on_connection(void *context)
+{
+	post_send();
+	return 0;
+}
+
+int Process::on_route_resolved(struct rdma_cm_id *id){
+	struct rdma_conn_param connection_manager_params;
+	printf("route resolved.\n");
+	memsetzero(&connection_manager_params);
+	TEST_NZ(rdma_connect(id, &connection_manager_params));
+	return 0;
+}
+
+
+int Process::on_address_resolved(struct rdma_cm_id *id){
+	printf("address resolved.\n");
+	build_context(id->verbs);
+	build_queue_pair_attributes();
+	
+	TEST_NZ(rdma_create_qp(id, s_ctx->protection_domain, &this->queue_pair_attributes));
+	
+	id->context = connection_ = new connection();
+	
+	connection_->identifier = id;
+	connection_->queue_pair = id->qp;
+	connection_->number_of_recvs = 0;
+	connection_->number_of_sends = 0;
+	
+	register_memory();
+	post_recvs();
+	
+	TEST_NZ(rdma_resolve_route(id, TIMEOUT_IN_MS));
+	
+	return 0;
+}
+
+
+
+
 
 int Process::on_connect_request(struct rdma_cm_id *id){
 	struct rdma_conn_param cm_params;
@@ -170,15 +145,31 @@ int Process::on_connect_request(struct rdma_cm_id *id){
 }
 
 
-void Process::event_loop(){
-	while (rdma_get_cm_event(this->event_channel, &event) == 0) {
-		// create a copy of the event and acknowledge
-		// acknowledgement is important
-		std::cout<<"IN WHILE"<<std::endl;
-		struct rdma_cm_event event_copy;
-		memcpy(&event_copy, event, sizeof(*event));
-		rdma_ack_cm_event(event);
-		if (on_event(&event_copy))
-			break;
-	}
+
+int Process::on_disconnect(struct rdma_cm_id *id){
+	rdma_destroy_qp(id);
+
+	struct benchmark_time btime;
+	start_time_keeping(&btime);
+	
+	ibv_dereg_mr(connection_->send_memory_region);
+	ibv_dereg_mr(connection_->recv_memory_region);
+	
+	double dt = end_time_keeping(&btime);
+	printf("MEMORY REG: %.8f mus\n", dt);
+	char msg[100];
+	sprintf(msg, "REG:%0.8f", dt);
+	logevent(this->logfilename, msg);
+
+	delete[] connection_->send_region;
+	delete[] connection_->recv_region;
+
+	delete[] connection_;
+	rdma_destroy_id(id);
+	if(client)
+		return 1;
+	else
+		return 0;
 }
+
+
