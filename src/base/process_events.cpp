@@ -102,23 +102,9 @@ int Process::on_route_resolved(struct rdma_cm_id *id){
 	return 0;
 }
 
-
 int Process::on_address_resolved(struct rdma_cm_id *id){
 	printf("address resolved.\n");
-	build_context(id->verbs);
-	build_queue_pair_attributes();
-	
-	TEST_NZ(rdma_create_qp(id, s_ctx->protection_domain, &this->queue_pair_attributes));
-	
-	id->context = connection_ = new connection();
-	
-	connection_->identifier = id;
-	connection_->queue_pair = id->qp;
-	connection_->number_of_recvs = 0;
-	connection_->number_of_sends = 0;
-	
-	register_memory();
-
+	build_connection(id);
 	if(mode_of_operation == MODE_SEND_RECEIVE){
 		post_recv();
 	}
@@ -126,31 +112,16 @@ int Process::on_address_resolved(struct rdma_cm_id *id){
 		std::cout<<"MODE_OF_OPERATION is not correct."<<std::endl;
 		exit(EXIT_FAILURE);
 	}
-
-	
-	
-	TEST_NZ(rdma_resolve_route(id, TIMEOUT_IN_MS));
-	
+	rdma_resolve_route(id, TIMEOUT_IN_MS);
 	return 0;
 }
-
-
 
 
 
 int Process::on_connect_request(struct rdma_cm_id *id){
 	struct rdma_conn_param cm_params;
 	printf("received connection request.\n");
-	
-	build_context(id->verbs);
-	build_queue_pair_attributes();
-
-	TEST_NZ(rdma_create_qp(id, s_ctx->protection_domain, &this->queue_pair_attributes));
-
-	id->context = connection_ = new connection();
-	connection_->queue_pair = id->qp;
-	
-	register_memory();
+	build_connection(id);
 	if(mode_of_operation == MODE_SEND_RECEIVE){
 		post_recv();
 	}
@@ -160,8 +131,7 @@ int Process::on_connect_request(struct rdma_cm_id *id){
 	}
 	
 	memsetzero(&cm_params);
-	TEST_NZ(rdma_accept(id, &cm_params));
-
+	rdma_accept(id, &cm_params);
 	return 0;
 }
 

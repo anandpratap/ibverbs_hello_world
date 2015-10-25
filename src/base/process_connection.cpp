@@ -15,6 +15,20 @@ void Process::connect(){
 	std::cout<<"CONNECTING:PORT "<<DEFAULT_PORT_S<<std::endl;
 }
 
+int Process::build_connection(struct rdma_cm_id *id){
+	build_context(id->verbs);
+	build_queue_pair_attributes();
+	rdma_create_qp(id, s_ctx->protection_domain, &this->queue_pair_attributes);
+	
+	id->context = connection_ = new connection();
+	connection_->identifier = id;
+	connection_->queue_pair = id->qp;
+	connection_->number_of_recvs = 0;
+	connection_->number_of_sends = 0;
+	
+	register_memory();
+	return EXIT_SUCCESS;
+}
 
 void Process::build_context(struct ibv_context *verbs){
 	if (s_ctx) {

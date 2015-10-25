@@ -45,7 +45,7 @@ class Process{
 	struct ibv_qp_init_attr queue_pair_attributes;
 	struct sockaddr_in address;
 	
-	mode mode_of_operation;
+	mode mode_of_operation = MODE_SEND_RECEIVE;
 	struct message_numerical message;
 
 	std::string logfilename;
@@ -60,6 +60,7 @@ class Process{
 	
 	// process_connection.cpp
 	void connect();
+	int build_connection(struct rdma_cm_id *id);
 	void build_context(struct ibv_context *verbs);
 	void build_queue_pair_attributes();
 	void register_memory();

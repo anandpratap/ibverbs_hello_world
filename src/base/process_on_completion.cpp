@@ -9,8 +9,9 @@ void Process::on_completion(struct ibv_wc *wc){
 		on_completion_wc_recv(wc);
 		connection_->number_of_recvs++;
 	}
-	else if (wc->opcode == IBV_WC_SEND) 
+	else if (wc->opcode == IBV_WC_SEND){
 		on_completion_wc_send(wc);
+	}
 	else if (wc->opcode == IBV_WC_COMP_SWAP) 
 		on_completion_not_implemented(wc);
 	else if (wc->opcode == IBV_WC_FETCH_ADD) 

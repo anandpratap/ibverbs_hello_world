@@ -12,7 +12,7 @@ int Process::post_send(){
 	
 	memsetzero(&wr);
 
-	wr.wr_id = (uintptr_t)connection_;
+	wr.wr_id = (uintptr_t)connection_->identifier;
 	wr.opcode = IBV_WR_SEND;
 	wr.sg_list = &sge;
 	wr.num_sge = 1;

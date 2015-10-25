@@ -22,7 +22,7 @@
 
 
 #define TIMEOUT_IN_MS 500
-#define MESSAGE_SIZE 5000
+#define MESSAGE_SIZE 500
 #define BUFFER_SIZE (MESSAGE_SIZE)
 
 #define DEFAULT_ADDRESS "localhost"
