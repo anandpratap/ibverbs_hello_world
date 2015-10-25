@@ -177,9 +177,9 @@ int Process::on_disconnect(struct rdma_cm_id *id){
 	ibv_dereg_mr(connection_->recv_memory_region);
 	
 	double dt = end_time_keeping(&btime);
-	printf("MEMORY REG: %.8f mus\n", dt);
+	printf("MEMORY DEREG: %.8f mus\n", dt);
 	char msg[100];
-	sprintf(msg, "REG:%0.8f", dt);
+	sprintf(msg, "DEREG:%0.8f", dt);
 	logevent(this->logfilename, msg);
 
 	delete[] connection_->send_region;
