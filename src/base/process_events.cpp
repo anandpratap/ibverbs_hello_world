@@ -83,9 +83,14 @@ void* Process::poll_cq_thunk(void* self){
 	return NULL;
 }
 
-int Process::on_connection(void *context)
-{
-	post_send();
+int Process::on_connection(void *context){
+	if(mode_of_operation == MODE_SEND_RECEIVE){
+		post_send();
+	}
+	else{
+		std::cout<<"MODE_OF_OPERATION is not correct."<<std::endl;
+		exit(EXIT_FAILURE);
+	}
 	return 0;
 }
 
@@ -113,7 +118,16 @@ int Process::on_address_resolved(struct rdma_cm_id *id){
 	connection_->number_of_sends = 0;
 	
 	register_memory();
-	post_recvs();
+
+	if(mode_of_operation == MODE_SEND_RECEIVE){
+		post_recv();
+	}
+	else{
+		std::cout<<"MODE_OF_OPERATION is not correct."<<std::endl;
+		exit(EXIT_FAILURE);
+	}
+
+	
 	
 	TEST_NZ(rdma_resolve_route(id, TIMEOUT_IN_MS));
 	
@@ -135,9 +149,16 @@ int Process::on_connect_request(struct rdma_cm_id *id){
 
 	id->context = connection_ = new connection();
 	connection_->queue_pair = id->qp;
-
+	
 	register_memory();
-	post_recvs();
+	if(mode_of_operation == MODE_SEND_RECEIVE){
+		post_recv();
+	}
+	else{
+		std::cout<<"MODE_OF_OPERATION is not correct."<<std::endl;
+		exit(EXIT_FAILURE);
+	}
+	
 	memsetzero(&cm_params);
 	TEST_NZ(rdma_accept(id, &cm_params));
 

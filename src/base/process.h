@@ -28,6 +28,11 @@ struct connection {
 	int number_of_sends;
 };
 
+enum mode{
+	MODE_SEND_RECEIVE,
+	MODE_RDMA_READ,
+	MODE_RDMA_WRITE
+};
 
 class Process{
  private:
@@ -40,12 +45,15 @@ class Process{
 	struct ibv_qp_init_attr queue_pair_attributes;
 	struct sockaddr_in address;
 	
+	mode mode_of_operation;
 	struct message_numerical message;
 
 	std::string logfilename;
 	std::string ipstring = "100.100.100.100";
 	uint16_t port = 0;
 	int client = 0;
+	int max_number_of_recvs = 1;
+	int max_number_of_sends = 1;
 
 	// process.cpp
 	void initialize();
@@ -76,7 +84,7 @@ class Process{
 	void on_completion_not_implemented(struct ibv_wc *wc);
 	
 	// process_comm_send.cpp and process_comm_recv.cpp
-	void post_recvs();
+	void post_recv();
 	int post_send();
 
 	// process_utils.cpp
@@ -92,8 +100,10 @@ class Process{
 	// process_utils.cpp
 	void set_as_client();
 	void set_ip_string(char *str);
+	void set_mode_of_operation(mode m);
+	void set_max_recv(int n);
+	void set_max_send(int n);
 };
-
 
 
 #endif

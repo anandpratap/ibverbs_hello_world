@@ -2,7 +2,7 @@
 #include "utils.h"
 #include "process.h"
 
-void Process::post_recvs(){
+void Process::post_recv(){
 	struct ibv_recv_wr wr, *bad_wr = NULL;
 	struct ibv_sge sge;
 

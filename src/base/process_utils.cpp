@@ -28,3 +28,15 @@ void Process::set_ip_string(char *str){
 	ipstring = std::string(str);
 }
 
+void Process::set_mode_of_operation(mode m){
+	this->mode_of_operation = m;
+}
+
+void Process::set_max_recv(int n){
+	max_number_of_recvs = n;
+}
+
+void Process::set_max_send(int n){
+	max_number_of_sends = n;
+}
+

@@ -5,8 +5,10 @@
 void Process::on_completion(struct ibv_wc *wc){
 	if (wc->status)
 		resolve_wc_error(wc->status);
-	if (wc->opcode == IBV_WC_RECV)
+	if (wc->opcode == IBV_WC_RECV){
 		on_completion_wc_recv(wc);
+		connection_->number_of_recvs++;
+	}
 	else if (wc->opcode == IBV_WC_SEND) 
 		on_completion_wc_send(wc);
 	else if (wc->opcode == IBV_WC_COMP_SWAP) 
@@ -24,8 +26,7 @@ void Process::on_completion(struct ibv_wc *wc){
 	else
 		die("wc->opcode not recognised.");
 	
-	connection_->number_of_recvs++;
-	if((connection_->number_of_recvs) == 2 && client){
+	if((connection_->number_of_recvs == max_number_of_recvs) && client){
 		rdma_disconnect(connection_identifier);
 	}
 }
