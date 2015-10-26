@@ -53,7 +53,7 @@ def parse_log(fname):
     log.total_runtime = reject_outliers(array(total_runtime))
     return log
 
-def plots(log, fignum):
+def plots(log, fignum, mode, p):
     reg_time = log.registration_time
     dereg_time = log.deregistration_time
 
@@ -66,30 +66,30 @@ def plots(log, fignum):
 
     low_values_indices = d_time > 1  # Where values are low
     d_time[low_values_indices] = d_time[0]
- 
+    MODES = ['S-R', 'WRITE', 'READ']
     plot = semilogy
     figure(fignum)
-    title("REG TIME")
     subplot(2,3,1)
-    plot(reg_time)
+    title("REG TIME")
+    plot(reg_time, label=p + MODES[mode])
     subplot(2,3,2)
     title("DEREG TIME")
-    plot(dereg_time)
+    plot(dereg_time, label=p + MODES[mode])
     subplot(2,3,3)
     title("ALLOCATE")
-    plot(a_time)
+    plot(a_time, label=p + MODES[mode])
     subplot(2,3,4)
     title("DEALLOCATE")
-    plot(da_time)
+    plot(da_time, label=p + MODES[mode])
     subplot(2,3,5)
     title("DATA")
-    plot(d_time)
+    plot(d_time, label=p + MODES[mode])
     subplot(2,3,6)
     title("TOTAL Client")
-    plot(t_time)
-       
+    plot(t_time, label=p + MODES[mode])
+    legend(loc=2)
 
-if __name__ == "__main__":
+if 0:
     log = parse_log("../../bin/logs/size_11/mode_0/server.log")
     sizes = array([7, 11, 15, 19])
     x = 2**sizes
@@ -118,8 +118,8 @@ if __name__ == "__main__":
             colors = ['r', 'g', 'b']
             MODES = ['S-R', 'WRITE', 'READ']
             for i in range(3):
-                loglog(x, creg[:,i], 'o-', color=colors[i], label=MODES[i])
-                loglog(x, sreg[:,i], 'o--', color=colors[i])
+                loglog(x, creg[:,i], 'o-', color=colors[i], label=MODES[i], basex=2)
+                loglog(x, sreg[:,i], 'o--', color=colors[i], basex=2)
             legend(loc=2)
             xlim(x.min(), x.max())
             xlabel('BUFFER SIZE')
@@ -127,3 +127,15 @@ if __name__ == "__main__":
             grid()
             savefig(obj + '.pdf')
     show()
+
+if __name__ == "__main__":
+    sizes = array([7, 11, 15, 19])
+    for _size in [7, 11, 15, 19]:
+        for mode in [0, 1, 2]:
+            log = parse_log("../../bin/logs/size_%s/mode_%s/client.log"%(_size, mode))
+            plots(log, _size, mode, ' s ')
+            log = parse_log("../../bin/logs/size_%s/mode_%s/server.log"%(_size, mode))
+            plots(log, _size, mode, ' c ')
+        figure(_size)
+        savefig('times_%s.pdf'%_size)
+    
