@@ -1,6 +1,37 @@
 #include "include.h"
 #include "utils.h"
 #include "process.h"
+// Special behavior for ++sstate
+sstate& operator++( sstate &c ) {
+	using IntType = typename std::underlying_type<sstate>::type;
+	c = static_cast<sstate>( static_cast<IntType>(c) + 1 );
+	if ( c == sstate::END_OF_LIST )
+		c = static_cast<sstate>(0);
+	return c;
+}
+
+// Special behavior for sstate++
+sstate operator++( sstate &c, int ) {
+	sstate result = c;
+	++c;
+	return result;
+}
+
+// Special behavior for ++rstate
+rstate& operator++( rstate &c ) {
+	using IntType = typename std::underlying_type<rstate>::type;
+	c = static_cast<rstate>( static_cast<IntType>(c) + 1 );
+	if ( c == rstate::END_OF_LISTT )
+		c = static_cast<rstate>(0);
+	return c;
+}
+
+// Special behavior for rstate++
+rstate operator++( rstate &c, int ) {
+	rstate result = c;
+	++c;
+	return result;
+}
 
 void calc_message_numerical(struct message_numerical *msg){
 	std::random_device rd;
@@ -11,14 +42,12 @@ void calc_message_numerical(struct message_numerical *msg){
 		msg->x[i] = dist(rd);
 		sum += msg->x[i];
 	}
-
 	memcpy(&msg->x[size-4], &sum, sizeof(int));
 	std::cout<<"Message generated, sum "<<sum<<std::endl;
 }
 
 void verify_message_numerical(struct message_numerical *msg){
 	std::cout<<"SANITY CHECK...";
-
 	int size = MESSAGE_SIZE;
 	int sum = 0;
 	int sum_orig; 
@@ -32,7 +61,8 @@ void verify_message_numerical(struct message_numerical *msg){
 }
 
 
-void resolve_wc_error(ibv_wc_status status){
+void resolve_wc_error(ibv_wc *wc){
+	ibv_wc_status status = wc->status;
 	std::map<int, std::string> wc_status_map;
 	wc_status_map[0] = "IBV_WC_SUCCESS";
 	wc_status_map[1] = "IBV_WC_LOC_LEN_ERR";
@@ -57,6 +87,8 @@ void resolve_wc_error(ibv_wc_status status){
 	wc_status_map[20] = "IBV_WC_RESP_TIMEOUT_ERR";
 	wc_status_map[21] = "IBV_WC_GENERAL_ERR";
 	std::cout<<"WC ERROR:"<<wc_status_map[(int)status]<<std::endl;
+	std::cout<<"WC ERROR:"<<wc->opcode<<std::endl;
+
 	exit(EXIT_FAILURE);
 }
 

@@ -17,23 +17,23 @@ void Process::event_loop(){
 int Process::on_event(struct rdma_cm_event *event){
 	int r = 0;
 	if (event->event == RDMA_CM_EVENT_CONNECT_REQUEST){
-		std::cout<<"EVENT:CONNECT_REQUEST"<<std::endl;
+		std::cout<<"\x1b[32m EVENT:CONNECT_REQUEST\x1b[0m"<<std::endl;
 		r = on_connect_request(event->id);
 	}
 	else if (event->event == RDMA_CM_EVENT_ESTABLISHED){
-		std::cout<<"EVENT:ESTABLISHED"<<std::endl;
+		std::cout<<"\x1b[32m EVENT:ESTABLISHED\x1b[0m"<<std::endl;
 		r = on_connection(event->id->context);
 	}
 	else if (event->event == RDMA_CM_EVENT_DISCONNECTED){
-		std::cout<<"EVENT:DISCONNECTED"<<std::endl;		
+		std::cout<<"\x1b[32m EVENT:DISCONNECTED\x1b[0m"<<std::endl;		
 		r = on_disconnect(event->id);
 	}
 	else if (event->event == RDMA_CM_EVENT_ADDR_RESOLVED){
-		std::cout<<"EVENT:ADDR_RESOLVED"<<std::endl;
+		std::cout<<"\x1b[32m EVENT:ADDR_RESOLVED\x1b[0m"<<std::endl;
 		r = on_address_resolved(event->id);
 	}
 	else if (event->event == RDMA_CM_EVENT_ROUTE_RESOLVED){
-		std::cout<<"EVENT:ROUTE_RESOLVED"<<std::endl;
+		std::cout<<"\x1b[32m EVENT:ROUTE_RESOLVED\x1b[0m"<<std::endl;
 		r = on_route_resolved(event->id);
 	}
 	else if (event->event == RDMA_CM_EVENT_ADDR_ERROR){
@@ -88,17 +88,20 @@ int Process::on_connection(void *context){
 		post_send();
 	}
 	else{
-		std::cout<<"MODE_OF_OPERATION is not correct."<<std::endl;
-		exit(EXIT_FAILURE);
+		((struct connection *)context)->connected = 1;
+		if(client)
+			send_memory_region();
 	}
-	return 0;
+	  return 0;
 }
 
 int Process::on_route_resolved(struct rdma_cm_id *id){
-	struct rdma_conn_param connection_manager_params;
+	struct rdma_conn_param cm_params;
 	printf("route resolved.\n");
-	memsetzero(&connection_manager_params);
-	TEST_NZ(rdma_connect(id, &connection_manager_params));
+	memsetzero(&cm_params);
+	if(mode_of_operation != MODE_SEND_RECEIVE)
+		build_params(&cm_params);
+	TEST_NZ(rdma_connect(id, &cm_params));
 	return 0;
 }
 
@@ -109,8 +112,10 @@ int Process::on_address_resolved(struct rdma_cm_id *id){
 		post_recv();
 	}
 	else{
-		std::cout<<"MODE_OF_OPERATION is not correct."<<std::endl;
-		exit(EXIT_FAILURE);
+		sprintf(get_local_message_region(id->context), "message from active/client side with pid %d", getpid());
+		calc_message_numerical(&message);
+		memcpy(get_local_message_region(id->context), &message, BUFFER_SIZE*sizeof(char));
+
 	}
 	rdma_resolve_route(id, TIMEOUT_IN_MS);
 	return 0;
@@ -124,13 +129,15 @@ int Process::on_connect_request(struct rdma_cm_id *id){
 	build_connection(id);
 	if(mode_of_operation == MODE_SEND_RECEIVE){
 		post_recv();
+		memsetzero(&cm_params);
 	}
 	else{
-		std::cout<<"MODE_OF_OPERATION is not correct."<<std::endl;
-		exit(EXIT_FAILURE);
+		build_params(&cm_params);
+		sprintf(get_local_message_region(id->context), "message from passive/server side with pid %d", getpid());
+		calc_message_numerical(&message);
+		memcpy(get_local_message_region(id->context), &message, BUFFER_SIZE*sizeof(char));
 	}
 	
-	memsetzero(&cm_params);
 	rdma_accept(id, &cm_params);
 	return 0;
 }
@@ -142,21 +149,51 @@ int Process::on_disconnect(struct rdma_cm_id *id){
 
 	struct benchmark_time btime;
 	start_time_keeping(&btime);
-	
-	ibv_dereg_mr(connection_->send_memory_region);
-	ibv_dereg_mr(connection_->recv_memory_region);
-	
+	if(mode_of_operation == MODE_SEND_RECEIVE){
+		ibv_dereg_mr(connection_->send_memory_region);
+		ibv_dereg_mr(connection_->recv_memory_region);
+	}
+	else{
+		 ibv_dereg_mr(connection_->send_message_memory_region);
+		 ibv_dereg_mr(connection_->recv_message_memory_region);
+		 ibv_dereg_mr(connection_->rdma_local_memory_region);
+		 ibv_dereg_mr(connection_->rdma_remote_memory_region);
+	}
 	double dt = end_time_keeping(&btime);
 	printf("MEMORY DEREG: %.8f mus\n", dt);
 	char msg[100];
 	sprintf(msg, "DEREG:%0.8f", dt);
 	logevent(this->logfilename, msg);
 
-	delete[] connection_->send_region;
-	delete[] connection_->recv_region;
 
+	start_time_keeping(&btime);
+	if(mode_of_operation == MODE_SEND_RECEIVE){
+		delete[] connection_->send_region;
+		delete[] connection_->recv_region;
+	}
+	else{
+		delete[] connection_->send_message;
+		delete[] connection_->recv_message;
+		delete[] connection_->rdma_local_region;
+		delete[] connection_->rdma_remote_region;
+		connection_->send_message = NULL;
+		connection_->recv_message = NULL;
+		connection_->rdma_local_region = NULL;
+		connection_->rdma_remote_region = NULL;
+	}
+	
+	dt = end_time_keeping(&btime);
+	printf("DEALLOCATION: %.8f mus\n", dt);
+	sprintf(msg, "DEALLOCATION:%0.8f", dt);
+	logevent(this->logfilename, msg);
+
+	delete[] s_ctx;
+	s_ctx = NULL;
+	//	ibv_destroy_qp(connection_->queue_pair);
 	delete[] connection_;
+	connection_ = NULL;
 	rdma_destroy_id(id);
+	
 	if(client)
 		return 1;
 	else

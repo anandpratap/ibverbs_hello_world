@@ -9,8 +9,7 @@ template <class T>
 void memsetzero(T *x){
 	memset(x, 0, sizeof(*x));
 }
-
-void resolve_wc_error(ibv_wc_status status);
+void resolve_wc_error(ibv_wc *wc);
 
 void logevent(std::string logfilename, char* msg);
 

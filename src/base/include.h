@@ -12,7 +12,6 @@
 #include <cassert>
 #include <string>
 
-
 #include <rdma/rdma_cma.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -21,8 +20,18 @@
 #define STR(x) STR_HELPER(x)
 
 
-#define TIMEOUT_IN_MS 500
-#define MESSAGE_SIZE 500
+#define TIMEOUT_IN_MS 250
+/*
+  8
+  128
+  2048
+  32768
+  524288
+  8388608
+  134217728
+  2147483648
+*/
+#define MESSAGE_SIZE 8388608
 #define BUFFER_SIZE (MESSAGE_SIZE)
 
 #define DEFAULT_ADDRESS "localhost"
@@ -30,8 +39,6 @@
 #define DEFAULT_PORT_S STR(DEFAULT_PORT)
 
 #define SERVER_ADDRESS_STR "10.255.4.162"
-
-
 inline void die(const char *reason){
 	fprintf(stderr, "%s\n", reason);
 	exit(EXIT_FAILURE);

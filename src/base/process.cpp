@@ -1,7 +1,7 @@
 #include "include.h"
 #include "utils.h"
-#include "process.h"
-
+#include "process.h" 
+struct benchmark_time __time;
 Process::Process(){
 }
 Process::~Process(){
