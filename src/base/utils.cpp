@@ -33,28 +33,28 @@ rstate operator++( rstate &c, int ) {
 	return result;
 }
 
-void calc_message_numerical(struct message_numerical *msg){
+void calc_message_numerical(struct message_numerical *message){
 	std::random_device rd;
 	std::uniform_int_distribution<int> dist(1,127);
-	int size = MESSAGE_SIZE;
+	int size = message->size;
 	int sum = 0;
 	for(int i=0; i<size-4; i++){
-		msg->x[i] = dist(rd);
-		sum += msg->x[i];
+		message->x[i] = dist(rd);
+		sum += message->x[i];
 	}
-	memcpy(&msg->x[size-4], &sum, sizeof(int));
+	memcpy(message->x+(message->size-4)*sizeof(char), &sum, sizeof(int));
 	std::cout<<"Message generated, sum "<<sum<<std::endl;
 }
 
-void verify_message_numerical(struct message_numerical *msg){
+void verify_message_numerical(struct message_numerical *message){
 	std::cout<<"SANITY CHECK...";
-	int size = MESSAGE_SIZE;
+	int size = message->size;
 	int sum = 0;
 	int sum_orig; 
 	for(int i=0; i<size-4; i++){
-		sum += msg->x[i];
+		sum += message->x[i];
 	}
-	memcpy(&sum_orig,  &msg->x[size-4], sizeof(int));
+	memcpy(&sum_orig,  message->x+(message->size-4)*sizeof(char), sizeof(int));
 	
 	assert(sum_orig == sum);
 	std::cout<<"PASSED."<<std::endl;

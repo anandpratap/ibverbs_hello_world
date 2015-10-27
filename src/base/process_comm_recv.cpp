@@ -3,16 +3,16 @@
 #include "process.h"
 
 void Process::post_recv(){
-	struct ibv_recv_wr wr, *bad_wr = NULL;
+	struct ibv_recv_wr wr, *bad_wr = nullptr;
 	struct ibv_sge sge;
 	wr.wr_id = (uintptr_t)connection_->identifier;
-	wr.next = NULL;
+	wr.next = nullptr;
 	wr.sg_list = &sge;
 	wr.num_sge = 1;
 
 	if(mode_of_operation == MODE_SEND_RECEIVE){
 		sge.addr = (uintptr_t)connection_->recv_region;
-		sge.length = BUFFER_SIZE;
+		sge.length = message.size;
 		sge.lkey = connection_->recv_memory_region->lkey;
 	}
 	else{

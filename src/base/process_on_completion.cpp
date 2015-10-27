@@ -83,7 +83,7 @@ void Process::on_completion(struct ibv_wc *wc){
 	
 	if(mode_of_operation != MODE_SEND_RECEIVE && !wc->status){
 		if (connection_->send_state == SS_MR_SENT && connection_->recv_state == RS_MR_RECV) {
-			struct ibv_send_wr wr, *bad_wr = NULL;
+			struct ibv_send_wr wr, *bad_wr = nullptr;
 			struct ibv_sge sge;
 			if (mode_of_operation == MODE_RDMA_WRITE)
 				printf("received MSG_MR. writing message to remote memory...\n");
@@ -100,7 +100,7 @@ void Process::on_completion(struct ibv_wc *wc){
 			wr.wr.rdma.rkey = connection_->remote_memory_region.rkey;
 			
 			sge.addr = (uintptr_t)connection_->rdma_local_region;
-			sge.length = BUFFER_SIZE;
+			sge.length = message.size;
 			sge.lkey = connection_->rdma_local_memory_region->lkey;
 			
 			TEST_NZ(ibv_post_send(connection_->queue_pair, &wr, &bad_wr));
@@ -109,11 +109,15 @@ void Process::on_completion(struct ibv_wc *wc){
 			connection_->send_message->type = MSG_DONE;
 			send_message();
 		} else if (connection_->send_state == SS_DONE_SENT && connection_->recv_state == RS_DONE_RECV) {
-			struct message_numerical* recv_message = (struct message_numerical *) get_remote_message_region(connection_);
+			struct message_numerical recv_message;
+			recv_message.x = get_remote_message_region(connection_);
+			recv_message.size = message.size;
+			
 			int sum = 0;
-			memcpy(&sum, &(recv_message->x[MESSAGE_SIZE-4]), sizeof(int));
-			std::cout<<"----------RECV COUNT: "<<connection_->number_of_recvs << " SUM:"<<sum<<std::endl;
-			verify_message_numerical(recv_message);
+			
+			memcpy(&sum, recv_message.x + (message.size-4)*sizeof(char), sizeof(int));
+			std::cout<<"RECV COUNT: "<<connection_->number_of_recvs << " SUM:"<<sum<<std::endl;
+			verify_message_numerical(&recv_message);
 			rdma_disconnect(connection_->identifier);
 		}
 	}
@@ -126,11 +130,13 @@ void Process::on_completion(struct ibv_wc *wc){
 }
 
 void Process::on_completion_wc_recv(struct ibv_wc *wc){
-	struct message_numerical* recv_message = (struct message_numerical *) connection_->recv_region;
+	struct message_numerical recv_message;
+	recv_message.x = connection_->recv_region;
+	recv_message.size = message.size;
 	int sum = 0;
-	memcpy(&sum, &(recv_message->x[MESSAGE_SIZE-4]), sizeof(int));
+	memcpy(&sum, recv_message.x + (message.size-4)*sizeof(char), sizeof(int));
 	std::cout<<"RECV COUNT: "<<connection_->number_of_recvs << " SUM:"<<sum<<std::endl;
-	verify_message_numerical(recv_message);
+	verify_message_numerical(&recv_message);
 }
 
 

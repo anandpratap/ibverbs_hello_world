@@ -40,3 +40,19 @@ void Process::set_max_send(int n){
 	max_number_of_sends = n;
 }
 
+
+int Process::set_message_size(unsigned int n){
+	this->message.size = n;
+	this->message.x = new char[n];
+	std::cout<<"Setting message size and allocating memory "<<n<<std::endl;
+	return EXIT_SUCCESS;
+}
+
+int Process::reset_message(){
+	delete[] this->message.x;
+	this->message.x = nullptr;
+	this->message.size = 0;
+	return EXIT_SUCCESS;
+}
+
+

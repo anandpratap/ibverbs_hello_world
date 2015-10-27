@@ -31,7 +31,8 @@ rstate& operator++(rstate &c);
 rstate operator++(rstate &c, int);
 
 struct message_numerical{
-	char x[MESSAGE_SIZE];
+	char *x;
+	unsigned int size;
 };
 
 struct message_sync{
@@ -67,8 +68,8 @@ struct connection {
 	struct ibv_mr *send_message_memory_region;
 	struct ibv_mr *recv_message_memory_region;
 	struct ibv_mr remote_memory_region;
-	char *rdma_local_region;
-	char *rdma_remote_region;
+	char *rdma_local_region = nullptr;
+	char *rdma_remote_region = nullptr;
 
 
 	struct message_sync *recv_message;
@@ -90,11 +91,11 @@ enum mode{
 
 class Process{
  private:
-	struct rdma_event_channel *event_channel = NULL;
-	struct rdma_cm_id *connection_identifier = NULL;
-	struct context *s_ctx = NULL;
-	struct connection *connection_ = NULL;
-	struct rdma_cm_event *event = NULL;
+	struct rdma_event_channel *event_channel = nullptr;
+	struct rdma_cm_id *connection_identifier = nullptr;
+	struct context *s_ctx = nullptr;
+	struct connection *connection_ = nullptr;
+	struct rdma_cm_event *event = nullptr;
 
 	struct ibv_qp_init_attr queue_pair_attributes;
 	struct sockaddr_in address;
@@ -163,7 +164,8 @@ class Process{
 	void set_mode_of_operation(mode m);
 	void set_max_recv(int n);
 	void set_max_send(int n);
+	int set_message_size(unsigned int n);
+	int reset_message();
 };
-
 
 #endif

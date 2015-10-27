@@ -5,15 +5,15 @@
 void Process::connect(){
 	// create event channel, connection identifier, and post resolve addressess 
 	event_channel = rdma_create_event_channel();
-	rdma_create_id(event_channel, &connection_identifier, NULL, RDMA_PS_TCP);
+	rdma_create_id(event_channel, &connection_identifier, nullptr, RDMA_PS_TCP);
 	if(client){
-		rdma_resolve_addr(connection_identifier, NULL, (struct sockaddr*)&address, TIMEOUT_IN_MS);
+		rdma_resolve_addr(connection_identifier, nullptr, (struct sockaddr*)&address, TIMEOUT_IN_MS);
 	}
 	else{
 		rdma_bind_addr(connection_identifier, (struct sockaddr *)&address);
 		rdma_listen(connection_identifier, 10);
 	}
-	std::cout<<"CONNECTING:PORT "<<DEFAULT_PORT_S<<std::endl;
+	std::cout<<"CONNECTING:PORT "<<DEFAULT_PORT<<std::endl;
 }
 
 int Process::build_connection(struct rdma_cm_id *id){
@@ -54,9 +54,9 @@ void Process::build_context(struct ibv_context *verbs){
 	std::cout<<s_ctx->ctx<<std::endl;
 	s_ctx->protection_domain = ibv_alloc_pd(s_ctx->ctx);
 	s_ctx->completion_channel = ibv_create_comp_channel(s_ctx->ctx);
-	s_ctx->completion_queue = ibv_create_cq(s_ctx->ctx, 10, NULL, s_ctx->completion_channel, 0);
+	s_ctx->completion_queue = ibv_create_cq(s_ctx->ctx, 10, nullptr, s_ctx->completion_channel, 0);
 	ibv_req_notify_cq(s_ctx->completion_queue, 0);
-	pthread_create(&s_ctx->completion_queue_poller_thread, NULL, &Process::poll_cq_thunk, static_cast<void*>(this));
+	pthread_create(&s_ctx->completion_queue_poller_thread, nullptr, &Process::poll_cq_thunk, static_cast<void*>(this));
 }
 
 void Process::build_queue_pair_attributes(){
@@ -83,14 +83,16 @@ void Process::register_memory(){
 
 	start_time_keeping(&btime);
 	if(mode_of_operation == MODE_SEND_RECEIVE){
-		connection_->send_region = new char[BUFFER_SIZE];
-		connection_->recv_region = new char[BUFFER_SIZE];
+		connection_->send_region = new char[message.size];
+		connection_->recv_region = new char[message.size];
 	}
 	else{
-		connection_->send_message = new message_sync;
-		connection_->recv_message = new message_sync;
-		connection_->rdma_local_region = new char[BUFFER_SIZE];
-		connection_->rdma_remote_region = new char[BUFFER_SIZE];
+		connection_->send_message = new message_sync();
+		connection_->recv_message = new message_sync();
+		std::cout<<"~~~~~~~~~~~~~~~~~~"<<message.size<<std::endl;
+		
+		connection_->rdma_local_region = new char[message.size]();
+		connection_->rdma_remote_region = new char[message.size]();
 	}
 	
 	double dt = end_time_keeping(&btime);
@@ -104,13 +106,13 @@ void Process::register_memory(){
 		connection_->send_memory_region = ibv_reg_mr(
 							     s_ctx->protection_domain, 
 							     connection_->send_region, 
-							     BUFFER_SIZE, 
+							     message.size, 
 							     IBV_ACCESS_LOCAL_WRITE);
 		
 		connection_->recv_memory_region = ibv_reg_mr(
 							     s_ctx->protection_domain, 
 							     connection_->recv_region, 
-							     BUFFER_SIZE, 
+							     message.size, 
 							     IBV_ACCESS_LOCAL_WRITE);
 	}
 	else{
@@ -135,13 +137,13 @@ void Process::register_memory(){
 		connection_->rdma_local_memory_region = ibv_reg_mr(
 								   s_ctx->protection_domain, 
 								   connection_->rdma_local_region, 
-								   BUFFER_SIZE, 
+								   message.size, 
 								   IBV_ACCESS_LOCAL_WRITE);
 
 		connection_->rdma_remote_memory_region = ibv_reg_mr(
 								    s_ctx->protection_domain, 
 								    connection_->rdma_remote_region, 
-								    BUFFER_SIZE, 
+								    message.size, 
 								    IBV_ACCESS_LOCAL_WRITE | mode);
 		
 	}

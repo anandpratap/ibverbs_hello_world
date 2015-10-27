@@ -78,9 +78,9 @@ void Process::poll_cq(void *ctx){
 
 
 void* Process::poll_cq_thunk(void* self){
-	void *ptr = NULL;
+	void *ptr = nullptr;
  	static_cast<Process*>(self)->poll_cq(ptr);
-	return NULL;
+	return nullptr;
 }
 
 int Process::on_connection(void *context){
@@ -112,9 +112,8 @@ int Process::on_address_resolved(struct rdma_cm_id *id){
 		post_recv();
 	}
 	else{
-		sprintf(get_local_message_region(id->context), "message from active/client side with pid %d", getpid());
 		calc_message_numerical(&message);
-		memcpy(get_local_message_region(id->context), &message, BUFFER_SIZE*sizeof(char));
+		memcpy(get_local_message_region(id->context), message.x, message.size*sizeof(char));
 
 	}
 	rdma_resolve_route(id, TIMEOUT_IN_MS);
@@ -133,9 +132,8 @@ int Process::on_connect_request(struct rdma_cm_id *id){
 	}
 	else{
 		build_params(&cm_params);
-		sprintf(get_local_message_region(id->context), "message from passive/server side with pid %d", getpid());
 		calc_message_numerical(&message);
-		memcpy(get_local_message_region(id->context), &message, BUFFER_SIZE*sizeof(char));
+		memcpy(get_local_message_region(id->context), message.x, message.size*sizeof(char));
 	}
 	
 	rdma_accept(id, &cm_params);
@@ -145,19 +143,21 @@ int Process::on_connect_request(struct rdma_cm_id *id){
 
 
 int Process::on_disconnect(struct rdma_cm_id *id){
-	rdma_destroy_qp(id);
+	struct connection *conn = connection_;
+	rdma_destroy_qp(conn->identifier);
 
 	struct benchmark_time btime;
 	start_time_keeping(&btime);
+
 	if(mode_of_operation == MODE_SEND_RECEIVE){
-		ibv_dereg_mr(connection_->send_memory_region);
-		ibv_dereg_mr(connection_->recv_memory_region);
+		ibv_dereg_mr(conn->send_memory_region);
+		ibv_dereg_mr(conn->recv_memory_region);
 	}
 	else{
-		 ibv_dereg_mr(connection_->send_message_memory_region);
-		 ibv_dereg_mr(connection_->recv_message_memory_region);
-		 ibv_dereg_mr(connection_->rdma_local_memory_region);
-		 ibv_dereg_mr(connection_->rdma_remote_memory_region);
+		 ibv_dereg_mr(conn->send_message_memory_region);
+		 ibv_dereg_mr(conn->recv_message_memory_region);
+		 ibv_dereg_mr(conn->rdma_local_memory_region);
+		 ibv_dereg_mr(conn->rdma_remote_memory_region);
 	}
 	double dt = end_time_keeping(&btime);
 	printf("MEMORY DEREG: %.8f mus\n", dt);
@@ -168,18 +168,25 @@ int Process::on_disconnect(struct rdma_cm_id *id){
 
 	start_time_keeping(&btime);
 	if(mode_of_operation == MODE_SEND_RECEIVE){
-		delete[] connection_->send_region;
-		delete[] connection_->recv_region;
+		delete[] conn->send_region;
+		delete[] conn->recv_region;
 	}
 	else{
-		delete[] connection_->send_message;
-		delete[] connection_->recv_message;
-		delete[] connection_->rdma_local_region;
-		delete[] connection_->rdma_remote_region;
-		connection_->send_message = NULL;
-		connection_->recv_message = NULL;
-		connection_->rdma_local_region = NULL;
-		connection_->rdma_remote_region = NULL;
+		assert(conn->send_message!=nullptr);
+		delete conn->send_message;
+		assert(conn->recv_message!=nullptr);
+		delete conn->recv_message;
+
+		assert(conn->rdma_local_region!=nullptr);
+		delete[] conn->rdma_local_region;
+		assert(conn->rdma_remote_region!=nullptr);
+		delete[] conn->rdma_remote_region;
+		
+		// set to null
+		conn->send_message = nullptr;
+		conn->recv_message = nullptr;
+		conn->rdma_local_region = nullptr;
+		conn->rdma_remote_region = nullptr;
 	}
 	
 	dt = end_time_keeping(&btime);
@@ -187,13 +194,11 @@ int Process::on_disconnect(struct rdma_cm_id *id){
 	sprintf(msg, "DEALLOCATION:%0.8f", dt);
 	logevent(this->logfilename, msg);
 
-	delete[] s_ctx;
-	s_ctx = NULL;
-	//	ibv_destroy_qp(connection_->queue_pair);
-	delete[] connection_;
-	connection_ = NULL;
-	rdma_destroy_id(id);
-	
+	delete s_ctx;
+	s_ctx = nullptr;
+	rdma_destroy_id(conn->identifier);
+	delete conn;
+	conn = nullptr;
 	if(client)
 		return 1;
 	else

@@ -5,11 +5,13 @@
 int main(int argc, char** argv){
 	Process client;
 	
-	if(argc != 3){
-		die("usage: client <server-ip> mode");
+	if(argc != 4){
+		die("usage: client <server-ip> mode msgsize");
 	}
 	
 	int mode = atoi(argv[2]);
+	unsigned int message_size = boost::lexical_cast<unsigned int>(argv[3]);
+	client.set_message_size(message_size);
 	if(mode == 0)
 		client.set_mode_of_operation(MODE_SEND_RECEIVE);
 	else if(mode == 1)
