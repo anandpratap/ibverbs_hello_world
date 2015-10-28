@@ -70,6 +70,10 @@ int Process::send_memory_region(struct connection *conn){
 	assert(conn->rdma_remote_memory_region != nullptr);
 	assert(&conn->send_message->data.mr !=nullptr);
 	std::cout<<"Asddddddddddddddddddddd"<<std::endl;
+	std::cout<<"MR: "<<conn->rdma_remote_memory_region->addr<<std::endl;
+	std::cout<<"MR: "<<conn->rdma_remote_memory_region->rkey<<std::endl;
+	std::cout<<"MR: "<<conn->rdma_remote_memory_region->length<<std::endl;
+	std::cout<<"MR: "<<conn->rdma_remote_memory_region->lkey<<std::endl;
 	memcpy(&conn->send_message->data.mr, conn->rdma_remote_memory_region, sizeof(struct ibv_mr));
 	send_message(conn);
 	return 0;

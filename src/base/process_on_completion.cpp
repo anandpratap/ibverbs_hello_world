@@ -26,6 +26,11 @@ void Process::on_completion(struct ibv_wc *wc){
 			//			assert(&conn->recv_message->type != nullptr);
 			if(conn->recv_message->type == MSG_MR){
 				memcpy(&conn->remote_memory_region, &conn->recv_message->data.mr, sizeof(conn->remote_memory_region));
+				std::cout<<"MR: "<<conn->remote_memory_region.addr<<std::endl;
+				std::cout<<"MR: "<<conn->remote_memory_region.rkey<<std::endl;
+				std::cout<<"MR: "<<conn->remote_memory_region.length<<std::endl;
+				std::cout<<"MR: "<<conn->remote_memory_region.lkey<<std::endl;
+
 				post_recv(conn); 
 				if (conn->send_state == SS_INIT)
 					send_memory_region(conn);
