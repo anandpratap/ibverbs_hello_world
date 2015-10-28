@@ -51,29 +51,29 @@ struct context {
 };
 
 struct connection {
-	struct ibv_qp *queue_pair;
-	struct rdma_cm_id *identifier;
+	struct ibv_qp *queue_pair = nullptr;
+	struct rdma_cm_id *identifier = nullptr;
 
-	int connected;
+	int connected = 0;
 	// for send and recv
-	struct ibv_mr *recv_memory_region;
-	struct ibv_mr *send_memory_region;
-	char *recv_region;
-	char *send_region;
+	struct ibv_mr *recv_memory_region = nullptr;
+	struct ibv_mr *send_memory_region = nullptr;
+	char *recv_region = nullptr;
+	char *send_region = nullptr;
 
 
 	// for RDMA
-	struct ibv_mr *rdma_local_memory_region;
-	struct ibv_mr *rdma_remote_memory_region;
-	struct ibv_mr *send_message_memory_region;
-	struct ibv_mr *recv_message_memory_region;
+	struct ibv_mr *rdma_local_memory_region = nullptr;
+	struct ibv_mr *rdma_remote_memory_region = nullptr;
+	struct ibv_mr *send_message_memory_region = nullptr;
+	struct ibv_mr *recv_message_memory_region = nullptr;
 	struct ibv_mr remote_memory_region;
 	char *rdma_local_region = nullptr;
 	char *rdma_remote_region = nullptr;
 
 
-	struct message_sync *recv_message;
-	struct message_sync *send_message;
+	struct message_sync *recv_message = nullptr;
+	struct message_sync *send_message = nullptr;
 	
 	sstate send_state;
 	rstate recv_state;
@@ -94,7 +94,7 @@ class Process{
 	struct rdma_event_channel *event_channel = nullptr;
 	struct rdma_cm_id *connection_identifier = nullptr;
 	struct context *s_ctx = nullptr;
-	struct connection *connection_ = nullptr;
+
 	struct rdma_cm_event *event = nullptr;
 
 	struct ibv_qp_init_attr queue_pair_attributes;
@@ -118,9 +118,7 @@ class Process{
 	void build_context(struct ibv_context *verbs);
 	void build_queue_pair_attributes();
 	void build_params(struct rdma_conn_param *params);
-
-	void register_memory();
-	
+	void register_memory(struct connection *conn);	
 
 	// process_events.cpp
 	void event_loop();
@@ -142,10 +140,10 @@ class Process{
 	char* get_remote_message_region(struct connection *conn);
 	char* get_local_message_region(void *context);
 	// process_comm_send.cpp and process_comm_recv.cpp
-	void post_recv();
-	int post_send();
-	int send_message();
-	int send_memory_region();
+	void post_recv(struct connection *conn);
+	int post_send(void *ctx);
+	int send_message(struct connection *conn);
+	int send_memory_region(struct connection *conn);
 
 	// process_utils.cpp
 	void set_log_filename();

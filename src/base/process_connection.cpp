@@ -20,34 +20,41 @@ int Process::build_connection(struct rdma_cm_id *id){
 	build_context(id->verbs);
 	build_queue_pair_attributes();
 	rdma_create_qp(id, s_ctx->protection_domain, &this->queue_pair_attributes);
+
+	struct connection *conn;
+	id->context = conn = new connection();
 	
-	id->context = connection_ = new connection();
-	connection_->identifier = id;
-	connection_->queue_pair = id->qp;
-	connection_->number_of_recvs = 0;
-	connection_->number_of_sends = 0;
+	
+	conn->identifier = id;
+	std::cout<<"LOCATION CONN -> ID"<<conn->identifier<<"\n";
+	std::cout<<"LOCATION -> ID"<<id<<"\n";
+	conn->queue_pair = id->qp;
+	conn->number_of_recvs = 0;
+	conn->number_of_sends = 0;
 
 
 	if(mode_of_operation != MODE_SEND_RECEIVE){
-		connection_->send_state = SS_INIT;
-		connection_->recv_state = RS_INIT;
-		connection_->connected = 0;
-		register_memory();
-		post_recv();
+		conn->send_state = SS_INIT;
+		conn->recv_state = RS_INIT;
+		conn->connected = 0;
+		register_memory(conn);
+		printf("POSTINZG RECV\n");
+		post_recv(conn);
 	}
 	else{
-		register_memory();
+		std::cout<<"POINTER"<<conn<<std::endl;
+		register_memory(conn);
 	}
 	
 	return EXIT_SUCCESS;
 }
 
-void Process::build_context(struct ibv_context *verbs){
-	if (s_ctx) {
-		if (s_ctx->ctx != verbs)
-			die("cannot handle events in more than one context.");
-		return;
-	}
+ void Process::build_context(struct ibv_context *verbs){
+	 if (s_ctx) {
+		 if (s_ctx->ctx != verbs)
+			 die("cannot handle events in more than one context.");
+		 return;
+	 }
 	
 	s_ctx = new context();
 	s_ctx->ctx = verbs;
@@ -78,21 +85,20 @@ void Process::build_params(struct rdma_conn_param *params){
 	params->rnr_retry_count = 7; /* infinite retry */
 }
 
-void Process::register_memory(){
-	struct benchmark_time btime;
-
+void Process::register_memory(struct connection *conn){
+	struct benchmark_time btime;	
 	start_time_keeping(&btime);
 	if(mode_of_operation == MODE_SEND_RECEIVE){
-		connection_->send_region = new char[message.size];
-		connection_->recv_region = new char[message.size];
+		conn->send_region = new char[message.size]();
+		conn->recv_region = new char[message.size]();
 	}
 	else{
-		connection_->send_message = new message_sync();
-		connection_->recv_message = new message_sync();
+		conn->send_message = new message_sync();
+		conn->recv_message = new message_sync();
 		std::cout<<"~~~~~~~~~~~~~~~~~~"<<message.size<<std::endl;
 		
-		connection_->rdma_local_region = new char[message.size]();
-		connection_->rdma_remote_region = new char[message.size]();
+		conn->rdma_local_region = new char[message.size]();
+		conn->rdma_remote_region = new char[message.size]();
 	}
 	
 	double dt = end_time_keeping(&btime);
@@ -103,15 +109,15 @@ void Process::register_memory(){
 
 	start_time_keeping(&btime);
 	if(mode_of_operation == MODE_SEND_RECEIVE){
-		connection_->send_memory_region = ibv_reg_mr(
+		conn->send_memory_region = ibv_reg_mr(
 							     s_ctx->protection_domain, 
-							     connection_->send_region, 
+							     conn->send_region, 
 							     message.size, 
 							     IBV_ACCESS_LOCAL_WRITE);
 		
-		connection_->recv_memory_region = ibv_reg_mr(
+		conn->recv_memory_region = ibv_reg_mr(
 							     s_ctx->protection_domain, 
-							     connection_->recv_region, 
+							     conn->recv_region, 
 							     message.size, 
 							     IBV_ACCESS_LOCAL_WRITE);
 	}
@@ -122,27 +128,27 @@ void Process::register_memory(){
 		else
 			mode = IBV_ACCESS_REMOTE_WRITE;
 		
-		connection_->send_message_memory_region = ibv_reg_mr(
+		conn->send_message_memory_region = ibv_reg_mr(
 								 s_ctx->protection_domain, 
-								 connection_->send_message, 
+								 conn->send_message, 
 								 sizeof(message_sync), 
 								 IBV_ACCESS_LOCAL_WRITE);
 
-		connection_->recv_message_memory_region = ibv_reg_mr(
+		conn->recv_message_memory_region = ibv_reg_mr(
 								 s_ctx->protection_domain, 
-								 connection_->recv_message, 
+								 conn->recv_message, 
 								 sizeof(message_sync), 
 								 IBV_ACCESS_LOCAL_WRITE | mode);
 		
-		connection_->rdma_local_memory_region = ibv_reg_mr(
+		conn->rdma_local_memory_region = ibv_reg_mr(
 								   s_ctx->protection_domain, 
-								   connection_->rdma_local_region, 
+								   conn->rdma_local_region, 
 								   message.size, 
 								   IBV_ACCESS_LOCAL_WRITE);
 
-		connection_->rdma_remote_memory_region = ibv_reg_mr(
+		conn->rdma_remote_memory_region = ibv_reg_mr(
 								    s_ctx->protection_domain, 
-								    connection_->rdma_remote_region, 
+								    conn->rdma_remote_region, 
 								    message.size, 
 								    IBV_ACCESS_LOCAL_WRITE | mode);
 		

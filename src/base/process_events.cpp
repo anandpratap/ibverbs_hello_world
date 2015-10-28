@@ -65,12 +65,12 @@ int Process::on_event(struct rdma_cm_event *event){
 
 void Process::poll_cq(void *ctx){
 	struct ibv_wc wc;
-	
+	struct ibv_cq *cq;
 	while (1) {
-		TEST_NZ(ibv_get_cq_event(s_ctx->completion_channel, &s_ctx->completion_queue, &ctx));
-		ibv_ack_cq_events(s_ctx->completion_queue, 1);
-		TEST_NZ(ibv_req_notify_cq(s_ctx->completion_queue, 0));
-		while (ibv_poll_cq(s_ctx->completion_queue, 1, &wc)){
+		TEST_NZ(ibv_get_cq_event(s_ctx->completion_channel, &cq, &ctx));
+		ibv_ack_cq_events(cq, 1);
+		TEST_NZ(ibv_req_notify_cq(cq, 0));
+		while (ibv_poll_cq(cq, 1, &wc)){
 			on_completion(&wc);
 		}
 	}
@@ -84,13 +84,15 @@ void* Process::poll_cq_thunk(void* self){
 }
 
 int Process::on_connection(void *context){
+	struct connection *conn = (struct connection *) context; 
+	assert(context != nullptr);
 	if(mode_of_operation == MODE_SEND_RECEIVE){
-		post_send();
+		post_send(context);
 	}
 	else{
-		((struct connection *)context)->connected = 1;
+		conn->connected = 1;
 		if(client)
-			send_memory_region();
+			send_memory_region(conn);
 	}
 	  return 0;
 }
@@ -109,7 +111,7 @@ int Process::on_address_resolved(struct rdma_cm_id *id){
 	printf("address resolved.\n");
 	build_connection(id);
 	if(mode_of_operation == MODE_SEND_RECEIVE){
-		post_recv();
+		post_recv((struct connection *)id->context);
 	}
 	else{
 		calc_message_numerical(&message);
@@ -127,7 +129,7 @@ int Process::on_connect_request(struct rdma_cm_id *id){
 	printf("received connection request.\n");
 	build_connection(id);
 	if(mode_of_operation == MODE_SEND_RECEIVE){
-		post_recv();
+		post_recv((struct connection *) id->context);
 		memsetzero(&cm_params);
 	}
 	else{
@@ -143,7 +145,7 @@ int Process::on_connect_request(struct rdma_cm_id *id){
 
 
 int Process::on_disconnect(struct rdma_cm_id *id){
-	struct connection *conn = connection_;
+	struct connection *conn = (struct connection *) id->context;
 	rdma_destroy_qp(conn->identifier);
 
 	struct benchmark_time btime;
@@ -193,9 +195,6 @@ int Process::on_disconnect(struct rdma_cm_id *id){
 	printf("DEALLOCATION: %.8f mus\n", dt);
 	sprintf(msg, "DEALLOCATION:%0.8f", dt);
 	logevent(this->logfilename, msg);
-
-	delete s_ctx;
-	s_ctx = nullptr;
 	rdma_destroy_id(conn->identifier);
 	delete conn;
 	conn = nullptr;
