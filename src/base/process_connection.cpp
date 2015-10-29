@@ -21,8 +21,8 @@ int Process::build_connection(struct rdma_cm_id *id){
 	build_queue_pair_attributes();
 	rdma_create_qp(id, s_ctx->protection_domain, &this->queue_pair_attributes);
 
-	struct connection *conn;
-	id->context = conn = new connection();
+	Connection *conn;
+	id->context = conn = new Connection();
 	
 	
 	conn->identifier = id;
@@ -85,7 +85,7 @@ void Process::build_params(struct rdma_conn_param *params){
 	params->rnr_retry_count = 7; /* infinite retry */
 }
 
-void Process::register_memory(struct connection *conn){
+void Process::register_memory(Connection *conn){
 	struct benchmark_time btime;	
 	start_time_keeping(&btime);
 	if(mode_of_operation == MODE_SEND_RECEIVE){
@@ -104,7 +104,7 @@ void Process::register_memory(struct connection *conn){
 	double dt = end_time_keeping(&btime);
 	printf("ALLOCATION: %.8f mus\n", dt);
 	char msg[100];
-	sprintf(msg, "ALLOCATION:%0.8f", dt);
+	sprintf(msg, "ALLOCATION:%0.15f", dt);
 	logevent(this->logfilename, msg);
 
 	start_time_keeping(&btime);
@@ -156,7 +156,7 @@ void Process::register_memory(struct connection *conn){
 
 	dt = end_time_keeping(&btime);
 	printf("MEMORY REG: %.8f mus\n", dt);
-	sprintf(msg, "REG:%0.8f", dt);
+	sprintf(msg, "REG:%0.15f", dt);
 	logevent(this->logfilename, msg);
 }
 

@@ -15,6 +15,7 @@ enum sstate{
 	SS_MR_SENT,
 	SS_RDMA_SENT,
 	SS_DONE_SENT,
+	SS_DONE_SENT2,
 	END_OF_LIST 
 };
 
@@ -22,6 +23,7 @@ enum rstate{
 	RS_INIT,
 	RS_MR_RECV,
 	RS_DONE_RECV,
+	RS_DONE_RECV2,
 	END_OF_LISTT 
 };
 
@@ -50,7 +52,8 @@ struct context {
 	pthread_t completion_queue_poller_thread;
 };
 
-struct connection {
+class Connection {
+ public:
 	struct ibv_qp *queue_pair = nullptr;
 	struct rdma_cm_id *identifier = nullptr;
 
@@ -118,7 +121,7 @@ class Process{
 	void build_context(struct ibv_context *verbs);
 	void build_queue_pair_attributes();
 	void build_params(struct rdma_conn_param *params);
-	void register_memory(struct connection *conn);	
+	void register_memory(Connection *conn);	
 
 	// process_events.cpp
 	void event_loop();
@@ -137,22 +140,25 @@ class Process{
 	void on_completion_wc_recv(struct ibv_wc *wc);
 	void on_completion_wc_send(struct ibv_wc *wc);
 	void on_completion_not_implemented(struct ibv_wc *wc);
-	char* get_remote_message_region(struct connection *conn);
+	char* get_remote_message_region(Connection *conn);
 	char* get_local_message_region(void *context);
 	// process_comm_send.cpp and process_comm_recv.cpp
-	void post_recv(struct connection *conn);
+	void post_recv(Connection *conn);
 	int post_send(void *ctx);
-	int send_message(struct connection *conn);
-	int send_memory_region(struct connection *conn);
+	int send_message(Connection *conn);
+	int send_memory_region(Connection *conn);
 
 	// process_utils.cpp
-	void set_log_filename();
 	void get_self_address();
 	void get_server_address_from_string();
 
+	int number_of_recvs = 0;
+	int number_of_sends = 0;
+	
+	int disconnect = 0;
  public:
 	// process.cpp
-	std::string logfilename;
+	char logfilename[100];
 	Process();
 	~Process();
 	void run();
@@ -164,6 +170,7 @@ class Process{
 	void set_max_send(int n);
 	int set_message_size(unsigned int n);
 	int reset_message();
+	void set_logfilename(char *str);
 };
 
 #endif

@@ -15,6 +15,11 @@ int main(int argc, char **argv){
 		server.set_mode_of_operation(MODE_RDMA_READ);
 	else
 			std::cout<<"Wrong mode of operation"<<std::endl;
+
+	char logfilename[100];
+	sprintf(logfilename, "server.log");
+	server.set_logfilename(logfilename);
+	server.set_max_recv(100);
 	server.run();
 	return 0;
 }

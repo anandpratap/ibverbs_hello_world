@@ -84,7 +84,7 @@ void* Process::poll_cq_thunk(void* self){
 }
 
 int Process::on_connection(void *context){
-	struct connection *conn = (struct connection *) context; 
+	Connection *conn = (Connection *) context; 
 	assert(context != nullptr);
 	if(mode_of_operation == MODE_SEND_RECEIVE){
 		post_send(context);
@@ -111,7 +111,7 @@ int Process::on_address_resolved(struct rdma_cm_id *id){
 	printf("address resolved.\n");
 	build_connection(id);
 	if(mode_of_operation == MODE_SEND_RECEIVE){
-		post_recv((struct connection *)id->context);
+		post_recv((Connection *)id->context);
 	}
 	else{
 		calc_message_numerical(&message);
@@ -129,7 +129,7 @@ int Process::on_connect_request(struct rdma_cm_id *id){
 	printf("received connection request.\n");
 	build_connection(id);
 	if(mode_of_operation == MODE_SEND_RECEIVE){
-		post_recv((struct connection *) id->context);
+		post_recv((Connection *) id->context);
 		memsetzero(&cm_params);
 	}
 	else{
@@ -145,7 +145,8 @@ int Process::on_connect_request(struct rdma_cm_id *id){
 
 
 int Process::on_disconnect(struct rdma_cm_id *id){
-	struct connection *conn = (struct connection *) id->context;
+	printf("IN DISCONNE\n");
+	Connection *conn = (Connection *) id->context;
 	rdma_destroy_qp(conn->identifier);
 
 	struct benchmark_time btime;
@@ -164,7 +165,7 @@ int Process::on_disconnect(struct rdma_cm_id *id){
 	double dt = end_time_keeping(&btime);
 	printf("MEMORY DEREG: %.8f mus\n", dt);
 	char msg[100];
-	sprintf(msg, "DEREG:%0.8f", dt);
+	sprintf(msg, "DEREG:%0.15f", dt);
 	logevent(this->logfilename, msg);
 
 
@@ -193,7 +194,7 @@ int Process::on_disconnect(struct rdma_cm_id *id){
 	
 	dt = end_time_keeping(&btime);
 	printf("DEALLOCATION: %.8f mus\n", dt);
-	sprintf(msg, "DEALLOCATION:%0.8f", dt);
+	sprintf(msg, "DEALLOCATION:%0.15f", dt);
 	logevent(this->logfilename, msg);
 	rdma_destroy_id(conn->identifier);
 	delete conn;

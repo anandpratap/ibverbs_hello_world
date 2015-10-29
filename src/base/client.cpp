@@ -4,7 +4,6 @@
 
 int main(int argc, char** argv){
 	Process client;
-	
 	if(argc != 4){
 		die("usage: client <server-ip> mode msgsize");
 	}
@@ -25,12 +24,16 @@ int main(int argc, char** argv){
 	
 	struct benchmark_time btime;
 	start_time_keeping(&btime);
-	
+
+	char logfilename[100];
+	sprintf(logfilename, "client.log");
+	client.set_logfilename(logfilename);
+
 	client.run();
 	
 	double dt = end_time_keeping(&btime);
 	char msg[100];
-	sprintf(msg, "RUNTIME:%0.8f", dt);
+	sprintf(msg, "RUNTIME:%0.15f", dt);
 	printf("%s\n", msg);
 	logevent(client.logfilename, msg);
 	return 0;

@@ -4,7 +4,7 @@
 
 #define DEBUG
 
-void Process::post_recv(struct connection *conn){
+void Process::post_recv(Connection *conn){
 #ifdef DEBUG
 	assert(conn != nullptr);
 	assert(conn->identifier != nullptr);

@@ -4,7 +4,7 @@
 
 int Process::post_send(void *context){
 	
-	struct connection *conn = (struct connection *) context;
+	Connection *conn = (Connection *) context;
 	std::cout<<"SEND LOCATION CONN -> ID"<<conn->identifier<<"\n";
 	std::cout<<"SEND POINTER ID"<<connection_identifier<<std::endl<<std::flush;
 
@@ -38,7 +38,7 @@ int Process::post_send(void *context){
 }
 
 
-int Process::send_message(struct connection *conn){
+int Process::send_message(Connection *conn){
 	struct ibv_send_wr wr, *bad_wr = nullptr;
 	struct ibv_sge sge;
 	assert(conn != nullptr);
@@ -61,8 +61,8 @@ int Process::send_message(struct connection *conn){
 	return 0;
 }
 
-int Process::send_memory_region(struct connection *conn){
-	//struct connection *conn = (struct connection *)context;
+int Process::send_memory_region(Connection *conn){
+	//Connection *conn = (Connection *)context;
 	conn->send_message->type = MSG_MR;
 	assert(conn != nullptr);
 	assert(conn->identifier != nullptr);

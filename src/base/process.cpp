@@ -12,7 +12,7 @@ Process::~Process(){
 }
 
 void Process::initialize(){
-	set_log_filename();
+	;
 }
 
 void Process::run(){

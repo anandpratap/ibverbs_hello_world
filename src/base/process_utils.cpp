@@ -6,11 +6,8 @@ void Process::set_as_client(){
 }
 
 
-void Process::set_log_filename(){
-	if(client)
-		logfilename = "client.log";
-	else
-		logfilename = "server.log";
+void Process::set_logfilename(char *str){
+	sprintf(logfilename, str);
 }
 void Process::get_self_address(){
 	memsetzero(&address);
@@ -42,6 +39,10 @@ void Process::set_max_send(int n){
 
 
 int Process::set_message_size(unsigned int n){
+	if(n < 8){
+		die("By internal design message less than 8 bytes are not allowed.\n");
+	}
+	
 	this->message.size = n;
 	this->message.x = new char[n];
 	std::cout<<"Setting message size and allocating memory "<<n<<std::endl;
