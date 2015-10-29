@@ -6,7 +6,7 @@ Process::Process(){
 }
 Process::~Process(){
 	if(!client)
-		rdma_destroy_id(connection_identifier);
+		rdma_destroy_id(listener);
 	rdma_destroy_event_channel(event_channel);	
 	this->reset_message();
 }

@@ -6,7 +6,7 @@ void Process::on_completion(struct ibv_wc *wc){
 	Connection *conn = (Connection *)(uintptr_t)wc->wr_id;
 	printf("IN ON COMPLETION\n");
 	std::cout<<"LOCATION CONN -> ID"<<conn->identifier<<"\n";
-	std::cout<<"POINTER ID"<<connection_identifier<<std::endl<<std::flush;
+	std::cout<<"POINTER ID"<<listener<<std::endl<<std::flush;
 
 
 	if (wc->status)
@@ -56,7 +56,7 @@ void Process::on_completion(struct ibv_wc *wc){
 
 		if(disconnect && !client && conn->send_state == SS_DONE_SENT){
 			printf("DISCONNECTING-SERVERERERERERERER-----------------------\n");
-			//rdma_disconnect(connection_identifier);
+			//rdma_disconnect(listener);
 		}
 	}
 	else if (wc->opcode == IBV_WC_COMP_SWAP){ 
@@ -148,8 +148,8 @@ void Process::on_completion(struct ibv_wc *wc){
 
 	if((this->number_of_recvs == max_number_of_recvs) && !client){
 		std::cout<<"RECV PROCESS COUNT: "<<this->number_of_recvs <<std::endl;
-		std::cout<<"RECV PROCESS COUNT: "<<this->connection_identifier<<std::endl;
-		//Connection *conn_ = (Connection *) connection_identifier->context;
+		std::cout<<"RECV PROCESS COUNT: "<<this->listener<<std::endl;
+		//Connection *conn_ = (Connection *) listener->context;
 		//		rdma_disconnect(conn_->identifier);
 		//rdma_disconnect(conn->identifier);
 	}
@@ -176,9 +176,9 @@ void Process::on_completion_wc_send(struct ibv_wc *wc){
 	std::cout<<"Request sent on completion."<<std::endl;
 	if((conn->number_of_recvs == max_number_of_recvs) && client && (mode_of_operation == MODE_SEND_RECEIVE)){
 		std::cout<<"POINTER"<<conn->identifier<<std::endl<<std::flush;
-		std::cout<<"POINTER_"<<connection_identifier<<std::endl<<std::flush;
+		std::cout<<"POINTER_"<<listener<<std::endl<<std::flush;
 		printf("Calling disconnect\n");
-		//rdma_disconnect(connection_identifier);
+		//rdma_disconnect(listener);
 		rdma_disconnect(conn->identifier);
 	}
 

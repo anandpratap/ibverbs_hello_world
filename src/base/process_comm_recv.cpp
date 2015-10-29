@@ -10,7 +10,7 @@ void Process::post_recv(Connection *conn){
 	assert(conn->identifier != nullptr);
 #endif
 	std::cout<<"RECV LOCATION CONN -> ID"<<conn->identifier<<"\n";
-	std::cout<<"RECV POINTER ID"<<connection_identifier<<std::endl<<std::flush;
+	std::cout<<"RECV POINTER ID"<<listener<<std::endl<<std::flush;
 
 	struct ibv_recv_wr wr, *bad_wr = nullptr;
 	struct ibv_sge sge;

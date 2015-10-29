@@ -6,7 +6,7 @@ int Process::post_send(void *context){
 	
 	Connection *conn = (Connection *) context;
 	std::cout<<"SEND LOCATION CONN -> ID"<<conn->identifier<<"\n";
-	std::cout<<"SEND POINTER ID"<<connection_identifier<<std::endl<<std::flush;
+	std::cout<<"SEND POINTER ID"<<listener<<std::endl<<std::flush;
 
 	assert(conn != nullptr);
 	assert(conn->identifier != nullptr);

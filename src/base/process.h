@@ -95,7 +95,7 @@ enum mode{
 class Process{
  private:
 	struct rdma_event_channel *event_channel = nullptr;
-	struct rdma_cm_id *connection_identifier = nullptr;
+	struct rdma_cm_id *listener = nullptr;
 	struct context *s_ctx = nullptr;
 
 	struct rdma_cm_event *event = nullptr;

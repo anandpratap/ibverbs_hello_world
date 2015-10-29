@@ -5,13 +5,13 @@
 void Process::connect(){
 	// create event channel, connection identifier, and post resolve addressess 
 	event_channel = rdma_create_event_channel();
-	rdma_create_id(event_channel, &connection_identifier, nullptr, RDMA_PS_TCP);
+	rdma_create_id(event_channel, &listener, nullptr, RDMA_PS_TCP);
 	if(client){
-		rdma_resolve_addr(connection_identifier, nullptr, (struct sockaddr*)&address, TIMEOUT_IN_MS);
+		rdma_resolve_addr(listener, nullptr, (struct sockaddr*)&address, TIMEOUT_IN_MS);
 	}
 	else{
-		rdma_bind_addr(connection_identifier, (struct sockaddr *)&address);
-		rdma_listen(connection_identifier, 10);
+		rdma_bind_addr(listener, (struct sockaddr *)&address);
+		rdma_listen(listener, 10);
 	}
 	std::cout<<"CONNECTING:PORT "<<DEFAULT_PORT<<std::endl;
 }
