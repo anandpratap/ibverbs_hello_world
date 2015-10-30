@@ -26,6 +26,10 @@ void Process::set_ip_string(char *str){
 }
 
 void Process::set_mode_of_operation(mode m){
+    if(m < 0 || m > 2){
+        printf("ERROR:WRONG MODE OF OPERATION\n");
+        exit(EXIT_FAILURE);
+    }
 	this->mode_of_operation = m;
 }
 

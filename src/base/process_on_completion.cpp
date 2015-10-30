@@ -2,7 +2,7 @@
 #include "utils.h"
 #include "process.h"
 void Process::on_completion(struct ibv_wc *wc){
-    Connection *conn = reinterpret_cast<Connection*>((uintptr_t)wc->wr_id);
+    Connection *conn = reinterpret_cast<Connection*>(reinterpret_cast<uintptr_t>(wc->wr_id));
     if (wc->status)
         resolve_wc_error(wc);
     if (wc->opcode == IBV_WC_RECV){
@@ -94,15 +94,15 @@ void Process::on_completion(struct ibv_wc *wc){
                 printf("\t\tREADING RDMA\n");
             }
             memset(&wr, 0, sizeof(wr));
-            wr.wr_id = (uintptr_t)conn;
+            wr.wr_id = reinterpret_cast<uintptr_t>(conn);
             wr.opcode = (mode_of_operation == MODE_RDMA_WRITE) ? IBV_WR_RDMA_WRITE : IBV_WR_RDMA_READ;
             wr.sg_list = &sge;
             wr.num_sge = 1;
             wr.send_flags = IBV_SEND_SIGNALED;
-            wr.wr.rdma.remote_addr = (uintptr_t)conn->remote_memory_region.addr;
+            wr.wr.rdma.remote_addr = reinterpret_cast<uintptr_t>(conn->remote_memory_region.addr);
             wr.wr.rdma.rkey = conn->remote_memory_region.rkey;
 			
-            sge.addr = (uintptr_t)conn->rdma_local_region;
+            sge.addr = reinterpret_cast<uintptr_t>(conn->rdma_local_region);
             sge.length = message.size;
             sge.lkey = conn->rdma_local_memory_region->lkey;
 			
@@ -140,7 +140,7 @@ void Process::on_completion(struct ibv_wc *wc){
 }
 
 void Process::on_completion_wc_recv(struct ibv_wc *wc){
-    Connection *conn = reinterpret_cast<Connection*>((uintptr_t)wc->wr_id);   
+    Connection *conn = reinterpret_cast<Connection*>(reinterpret_cast<uintptr_t>(wc->wr_id));   
     struct message_numerical recv_message;
     assert(conn->recv_region !=nullptr);
     recv_message.x = conn->recv_region;

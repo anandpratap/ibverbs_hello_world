@@ -17,8 +17,10 @@ int main(int argc, char** argv){
 		client.set_mode_of_operation(MODE_RDMA_WRITE);
 	else if(mode == 2)
 		client.set_mode_of_operation(MODE_RDMA_READ);
-	else
+	else{
 		std::cout<<"Wrong mode of operation"<<std::endl;
+        exit(EXIT_FAILURE);
+    }
 	client.set_as_client();
 	client.set_ip_string(argv[1]);
 	
