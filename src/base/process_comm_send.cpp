@@ -19,13 +19,13 @@ int Process::post_send(void *context){
 	
 	memsetzero(&wr);
 
-	wr.wr_id = (uintptr_t)conn;
+	wr.wr_id = reinterpret_cast<uintptr_t>(conn);
 	wr.opcode = IBV_WR_SEND;
 	wr.sg_list = &sge;
 	wr.num_sge = 1;
 	wr.send_flags = IBV_SEND_SIGNALED;
 	
-	sge.addr = (uintptr_t)conn->send_region;
+	sge.addr = reinterpret_cast<uintptr_t>(conn->send_region);
 	sge.length = message.size;
 	sge.lkey = conn->send_memory_region->lkey;
 	
@@ -43,13 +43,13 @@ int Process::send_message(Connection *conn){
 
 	memset(&wr, 0, sizeof(wr));
 	
-	wr.wr_id = (uintptr_t)conn;
+	wr.wr_id = reinterpret_cast<uintptr_t>(conn);
 	wr.opcode = IBV_WR_SEND;
 	wr.sg_list = &sge;
 	wr.num_sge = 1;
 	wr.send_flags = IBV_SEND_SIGNALED;
-	
-	sge.addr = (uintptr_t)conn->send_message;
+    
+	sge.addr = reinterpret_cast<uintptr_t>(conn->send_message);
 	sge.length = sizeof(struct message_sync);
 	sge.lkey = conn->send_message_memory_region->lkey;
 	while (!conn->connected);
