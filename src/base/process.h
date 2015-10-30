@@ -105,7 +105,7 @@ class Process{
 	struct sockaddr_in address;
 	
 	mode mode_of_operation = MODE_SEND_RECEIVE;
-	struct message_numerical message;
+	struct message_numerical message();
 
 	std::string ipstring = "100.100.100.100";
 	uint16_t port = 0;
@@ -165,7 +165,7 @@ class Process{
 
  public:
 	// process.cpp
-	char logfilename[100];
+	char logfilename[100] = "log.log";
 	Process();
 	~Process();
 	void run();
