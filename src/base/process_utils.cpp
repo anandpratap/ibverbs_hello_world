@@ -40,12 +40,12 @@ void Process::set_max_send(int n){
 
 int Process::set_message_size(unsigned int n){
 	if(n < 8){
-		die("By internal design message less than 8 bytes are not allowed.\n");
+		printf("\tERROR:MESSAGE SIZE CANNOT BE LESS THAN 8 BYTES BY DESIGN\n");
+        exit(EXIT_FAILURE);
 	}
 	
 	this->message.size = n;
 	this->message.x = new char[n];
-	std::cout<<"Setting message size and allocating memory "<<n<<std::endl;
 	return EXIT_SUCCESS;
 }
 

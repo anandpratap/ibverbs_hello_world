@@ -56,7 +56,7 @@ class Connection {
  public:
 	struct ibv_qp *queue_pair = nullptr;
 	struct rdma_cm_id *identifier = nullptr;
-
+    
 	int connected = 0;
 	// for send and recv
 	struct ibv_mr *recv_memory_region = nullptr;

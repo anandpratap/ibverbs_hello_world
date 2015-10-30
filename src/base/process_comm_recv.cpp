@@ -9,9 +9,6 @@ void Process::post_recv(Connection *conn){
 	assert(conn != nullptr);
 	assert(conn->identifier != nullptr);
 #endif
-	std::cout<<"RECV LOCATION CONN -> ID"<<conn->identifier<<"\n";
-	std::cout<<"RECV POINTER ID"<<listener<<std::endl<<std::flush;
-
 	struct ibv_recv_wr wr, *bad_wr = nullptr;
 	struct ibv_sge sge;
 	wr.wr_id = (uintptr_t)conn;
@@ -26,13 +23,13 @@ void Process::post_recv(Connection *conn){
 	}
 	else{
 		assert(conn->recv_message != nullptr);
-		printf("post receive\n");
-		sge.addr = (uintptr_t)conn->recv_message;
+        sge.addr = (uintptr_t)conn->recv_message;
 		sge.length = sizeof(struct message_sync);
 		sge.lkey = conn->recv_message_memory_region->lkey;
 	}
+    
 	int st = ibv_post_recv(conn->queue_pair, &wr, &bad_wr);
 
 	if(st != 0)
-		printf ("ERROR: Unable to post receiver buffer.\n");
+		printf("ERROR:UNABLE TO POST RECEIVE %i\n", st);
 }
