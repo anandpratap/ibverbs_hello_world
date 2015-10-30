@@ -11,6 +11,7 @@
 #include <random>
 #include <cassert>
 #include <string>
+#include <memory>
 #include <boost/lexical_cast.hpp>
 
 #include <rdma/rdma_cma.h>

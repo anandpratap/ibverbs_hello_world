@@ -71,8 +71,8 @@ class Connection {
 	struct ibv_mr *send_message_memory_region = nullptr;
 	struct ibv_mr *recv_message_memory_region = nullptr;
 	struct ibv_mr remote_memory_region;
-	char *rdma_local_region = nullptr;
-	char *rdma_remote_region = nullptr;
+    char *rdma_local_region = nullptr;
+    char *rdma_remote_region = nullptr;
 
 
 	struct message_sync *recv_message = nullptr;
@@ -140,7 +140,7 @@ class Process{
 	void on_completion_wc_recv(struct ibv_wc *wc);
 	void on_completion_wc_send(struct ibv_wc *wc);
 	void on_completion_not_implemented(struct ibv_wc *wc);
-	char* get_remote_message_region(Connection *conn);
+    char* get_remote_message_region(Connection *conn);
 	char* get_local_message_region(void *context);
 	// process_comm_send.cpp and process_comm_recv.cpp
 	void post_recv(Connection *conn);
