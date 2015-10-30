@@ -43,23 +43,22 @@ void calc_message_numerical(struct message_numerical *message){
 		sum += message->x[i];
 	}
 	memcpy(message->x+(message->size-4)*sizeof(char), &sum, sizeof(int));
-	std::cout<<"Message generated, sum "<<sum<<std::endl;
+	printf("\t\tMESSAGE GENERATED:SUM %i\n", sum);
 }
 
 void verify_message_numerical(struct message_numerical *message){
-	std::cout<<"SANITY CHECK...";
+	printf("\t\tSANITY CHECK...");
 	int size = message->size;
 	int sum = 0;
 	int sum_orig; 
 
 	for(int i=0; i<size-4; i++){
-		//		std::cout<<i<<" "<<size<<std::endl;
 		sum += message->x[i];
 	}
 	memcpy(&sum_orig,  message->x+(message->size-4)*sizeof(char), sizeof(int));
 	
 	assert(sum_orig == sum);
-	std::cout<<"PASSED."<<std::endl;
+	printf("PASSED!\n");
 }
 
 

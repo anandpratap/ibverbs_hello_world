@@ -34,7 +34,7 @@ int main(int argc, char** argv){
 	double dt = end_time_keeping(&btime);
 	char msg[100];
 	sprintf(msg, "RUNTIME:%0.15f", dt);
-	printf("%s\n", msg);
+	printf("\t\tTIME:%s\n", msg);
 	logevent(client.logfilename, msg);
 	return 0;
 }

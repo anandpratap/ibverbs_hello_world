@@ -8,12 +8,14 @@ void Process::connect(){
 	rdma_create_id(event_channel, &listener, nullptr, RDMA_PS_TCP);
 	if(client){
 		rdma_resolve_addr(listener, nullptr, (struct sockaddr*)&address, TIMEOUT_IN_MS);
+        printf("CLIENT CONNECTED TO PORT %i\n", DEFAULT_PORT);
 	}
 	else{
 		rdma_bind_addr(listener, (struct sockaddr *)&address);
 		rdma_listen(listener, 10);
+        printf("SERVER LISTENING ON PORT %i\n", DEFAULT_PORT);
 	}
-	std::cout<<"CONNECTING:PORT "<<DEFAULT_PORT<<std::endl;
+
 }
 
 int Process::build_connection(struct rdma_cm_id *id){
@@ -26,8 +28,6 @@ int Process::build_connection(struct rdma_cm_id *id){
 	
 	
 	conn->identifier = id;
-	std::cout<<"LOCATION CONN -> ID"<<conn->identifier<<"\n";
-	std::cout<<"LOCATION -> ID"<<id<<"\n";
 	conn->queue_pair = id->qp;
 	conn->number_of_recvs = 0;
 	conn->number_of_sends = 0;
@@ -36,13 +36,15 @@ int Process::build_connection(struct rdma_cm_id *id){
 	if(mode_of_operation != MODE_SEND_RECEIVE){
 		conn->send_state = SS_INIT;
 		conn->recv_state = RS_INIT;
-		conn->connected = 0;
+        // if this 1 is not here for the server
+        // it results in hanging with optimization on
+        // I believe its because client posts receive even
+        // before the connection is on
+		conn->connected = 1;
 		register_memory(conn);
-		printf("POSTINZG RECV\n");
-		post_recv(conn);
+        post_recv(conn);
 	}
 	else{
-		std::cout<<"POINTER"<<conn<<std::endl;
 		register_memory(conn);
 	}
 	
@@ -51,14 +53,15 @@ int Process::build_connection(struct rdma_cm_id *id){
 
  void Process::build_context(struct ibv_context *verbs){
 	 if (s_ctx) {
-		 if (s_ctx->ctx != verbs)
-			 die("cannot handle events in more than one context.");
+		 if (s_ctx->ctx != verbs){
+			 printf("ERROR:CANNOT HANDLE EVENTS IN MORE THAN ONE CONTEXT");
+             exit(EXIT_FAILURE);
+         }
 		 return;
 	 }
 	
 	s_ctx = new context();
 	s_ctx->ctx = verbs;
-	std::cout<<s_ctx->ctx<<std::endl;
 	s_ctx->protection_domain = ibv_alloc_pd(s_ctx->ctx);
 	s_ctx->completion_channel = ibv_create_comp_channel(s_ctx->ctx);
 	s_ctx->completion_queue = ibv_create_cq(s_ctx->ctx, 10, nullptr, s_ctx->completion_channel, 0);
@@ -95,14 +98,12 @@ void Process::register_memory(Connection *conn){
 	else{
 		conn->send_message = new message_sync();
 		conn->recv_message = new message_sync();
-		std::cout<<"~~~~~~~~~~~~~~~~~~"<<message.size<<std::endl;
-		
 		conn->rdma_local_region = new char[message.size]();
 		conn->rdma_remote_region = new char[message.size]();
 	}
 	
 	double dt = end_time_keeping(&btime);
-	printf("ALLOCATION: %.8f mus\n", dt);
+	printf("\t\tTIME:ALLOCATION: %.8f mus\n", dt);
 	char msg[100];
 	sprintf(msg, "ALLOCATION:%0.15f", dt);
 	logevent(this->logfilename, msg);
@@ -155,7 +156,7 @@ void Process::register_memory(Connection *conn){
 	}
 
 	dt = end_time_keeping(&btime);
-	printf("MEMORY REG: %.8f mus\n", dt);
+	printf("\t\tTIME:MEMORY REG: %.8f mus\n", dt);
 	sprintf(msg, "REG:%0.15f", dt);
 	logevent(this->logfilename, msg);
 }

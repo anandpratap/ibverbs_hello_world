@@ -4,9 +4,7 @@
 
 int Process::post_send(void *context){
 	
-	Connection *conn = (Connection *) context;
-	std::cout<<"SEND LOCATION CONN -> ID"<<conn->identifier<<"\n";
-	std::cout<<"SEND POINTER ID"<<listener<<std::endl<<std::flush;
+	Connection *conn = static_cast<Connection*>(context);
 
 	assert(conn != nullptr);
 	assert(conn->identifier != nullptr);
@@ -18,7 +16,6 @@ int Process::post_send(void *context){
 	assert(&message != nullptr);
 	assert(conn->send_region != nullptr);
 	memcpy(conn->send_region, message.x, message.size*sizeof(char));
-	printf("connected. posting send...\n");
 	
 	memsetzero(&wr);
 
@@ -57,23 +54,18 @@ int Process::send_message(Connection *conn){
 	sge.lkey = conn->send_message_memory_region->lkey;
 	while (!conn->connected);
 	ibv_post_send(conn->queue_pair, &wr, &bad_wr);
-	printf("SEND_MESSAGE\n");
 	return 0;
 }
 
 int Process::send_memory_region(Connection *conn){
-	//Connection *conn = (Connection *)context;
 	conn->send_message->type = MSG_MR;
+#ifdef DEBUG
 	assert(conn != nullptr);
 	assert(conn->identifier != nullptr);
 	assert(conn->recv_message != nullptr);
 	assert(conn->rdma_remote_memory_region != nullptr);
 	assert(&conn->send_message->data.mr !=nullptr);
-	std::cout<<"Asddddddddddddddddddddd"<<std::endl;
-	std::cout<<"MR: "<<conn->rdma_remote_memory_region->addr<<std::endl;
-	std::cout<<"MR: "<<conn->rdma_remote_memory_region->rkey<<std::endl;
-	std::cout<<"MR: "<<conn->rdma_remote_memory_region->length<<std::endl;
-	std::cout<<"MR: "<<conn->rdma_remote_memory_region->lkey<<std::endl;
+#endif
 	memcpy(&conn->send_message->data.mr, conn->rdma_remote_memory_region, sizeof(struct ibv_mr));
 	send_message(conn);
 	return 0;
