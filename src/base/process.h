@@ -44,7 +44,8 @@ struct message_sync{
 	} data;
 };
 
-struct context {
+class context {
+ public:
 	struct ibv_context *ctx;
 	struct ibv_pd *protection_domain;
 	struct ibv_cq *completion_queue;
@@ -156,6 +157,12 @@ class Process{
 	int number_of_sends = 0;
 	
 	int disconnect = 0;
+
+	void set_send_work_request_attributes(struct ibv_send_wr *wr, struct ibv_sge *sge, Connection *conn, int submode=1);
+	void set_recv_work_request_attributes(struct ibv_recv_wr *wr, struct ibv_sge *sge, Connection *conn, int submode=1);
+	void set_send_scatter_gather_attributes(struct ibv_sge *sge, Connection *conn, int submode=1);
+	void set_recv_scatter_gather_attributes(struct ibv_sge *sge, Connection *conn, int submode=1);
+
  public:
 	// process.cpp
 	char logfilename[100];
