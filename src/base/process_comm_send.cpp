@@ -4,7 +4,7 @@
 
 int Process::post_send(void *context){
 	
-	Connection *conn = static_cast<Connection*>(context);
+	auto *conn = static_cast<Connection*>(context);
 
 	assert(conn != nullptr);
 	assert(conn->identifier != nullptr);

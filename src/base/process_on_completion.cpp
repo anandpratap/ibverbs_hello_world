@@ -2,13 +2,13 @@
 #include "utils.h"
 #include "process.h"
 void Process::on_completion(struct ibv_wc *wc){
-    Connection *conn = reinterpret_cast<Connection*>(reinterpret_cast<uintptr_t>(wc->wr_id));
+    auto *conn = reinterpret_cast<Connection*>(reinterpret_cast<uintptr_t>(wc->wr_id));
     if (wc->status)
         resolve_wc_error(wc);
     if (wc->opcode == IBV_WC_RECV){
         std::cout<<"\x1b[31m\tWC:OPCODE:RECV\x1b[0m"<<std::endl;
         if(mode_of_operation == MODE_SEND_RECEIVE){
-            double dt = end_time_keeping(&__time);
+            auto dt = end_time_keeping(&__time);
             printf("\t\tTIME:DATATIME: %.8f mus\n", dt);
             char msg[100];
             sprintf(msg, "DATATIME:%0.15f", dt);
@@ -58,7 +58,7 @@ void Process::on_completion(struct ibv_wc *wc){
     else if (wc->opcode == IBV_WC_RDMA_WRITE){
         std::cout<<"\x1b[31m\tWC:OPCODE:RDMA_WRITE\x1b[0m"<<std::endl;
         if(mode_of_operation == MODE_RDMA_WRITE){
-            double dt = end_time_keeping(&__time);
+            auto dt = end_time_keeping(&__time);
             printf("\t\tTIME:DATATIME: %.8f mus\n", dt);
             char msg[100];
             sprintf(msg, "DATATIME:%0.15f", dt);
@@ -69,7 +69,7 @@ void Process::on_completion(struct ibv_wc *wc){
     else if (wc->opcode == IBV_WC_RDMA_READ){
         std::cout<<"\x1b[31m\tWC:OPCODE:RDMA_READ\x1b[0m"<<std::endl;
         if(mode_of_operation == MODE_RDMA_READ){
-            double dt = end_time_keeping(&__time);
+            auto dt = end_time_keeping(&__time);
             printf("\t\tTIME:DATATIME: %.8f mus\n", dt);
             char msg[100];
             sprintf(msg, "DATATIME:%0.15f", dt);
@@ -129,7 +129,7 @@ void Process::on_completion(struct ibv_wc *wc){
 }
 
 void Process::on_completion_wc_recv(struct ibv_wc *wc){
-    Connection *conn = reinterpret_cast<Connection*>(reinterpret_cast<uintptr_t>(wc->wr_id));   
+    auto *conn = reinterpret_cast<Connection*>(reinterpret_cast<uintptr_t>(wc->wr_id));   
     struct message_numerical recv_message;
     assert(conn->recv_region !=nullptr);
     recv_message.x = conn->recv_region;

@@ -83,7 +83,7 @@ void* Process::poll_cq_thunk(void* self){
 }
 
 int Process::on_connection(void *context){
-	Connection *conn = static_cast<Connection*>(context); 
+	auto *conn = static_cast<Connection*>(context); 
 	assert(context != nullptr);
 	if(mode_of_operation == MODE_SEND_RECEIVE){
 		post_send(context);
@@ -140,7 +140,7 @@ int Process::on_connect_request(struct rdma_cm_id *id){
 
 
 int Process::on_disconnect(struct rdma_cm_id *id){
-    Connection *conn = static_cast<Connection*>(id->context);
+    auto *conn = static_cast<Connection*>(id->context);
 	rdma_destroy_qp(conn->identifier);
 
 	struct benchmark_time btime;
@@ -156,7 +156,7 @@ int Process::on_disconnect(struct rdma_cm_id *id){
 		 ibv_dereg_mr(conn->rdma_local_memory_region);
 		 ibv_dereg_mr(conn->rdma_remote_memory_region);
 	}
-	double dt = end_time_keeping(&btime);
+	auto dt = end_time_keeping(&btime);
 	printf("\t\tTIME:MEMORY DEREG: %.8f mus\n", dt);
 	char msg[100];
 	sprintf(msg, "DEREG:%0.15f", dt);

@@ -102,7 +102,7 @@ void Process::register_memory(Connection *conn){
 		conn->rdma_remote_region = new char[message.size]();
 	}
 	
-	double dt = end_time_keeping(&btime);
+	auto dt = end_time_keeping(&btime);
 	printf("\t\tTIME:ALLOCATION: %.8f mus\n", dt);
 	char msg[100];
 	sprintf(msg, "ALLOCATION:%0.15f", dt);
